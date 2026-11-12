@@ -26,7 +26,7 @@ export const DATA_FILES = [
 /** Default configuration written to config.json on first run. */
 export const DEFAULT_CONFIG = {
   schemaVersion: 1,
-  port: 3030,
+  port: 4040,
   host: '127.0.0.1',
   openBrowserOnStart: true,
   dryRun: true,
@@ -42,7 +42,7 @@ export const DEFAULT_CONFIG = {
     authMode: 'cookie',
     officialClientId: '',
     officialClientSecret: '',
-    officialRedirectUri: 'http://127.0.0.1:3030/api/channels/oauth/callback',
+    officialRedirectUri: 'http://127.0.0.1:4040/api/channels/oauth/callback',
   },
   limits: {
     invitationsPerWeek: 100,

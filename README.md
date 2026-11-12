@@ -16,7 +16,7 @@
 | **Conexões & DMs** | Keyword people search, batch invitations with `{{nome}}`/`{{empresa}}`/`{{cargo}}` variables, DM cascades (up to 5 messages/day, configurable interval, day delays, auto-pause on reply, manual approval), weekly/daily quotas |
 | **Vagas** | Resume upload (PDF/DOCX/TXT) parsed locally, semantic match score 0–100 with skill gaps, job search, save/discard, Easy Apply automation (dry-run first) |
 
-Everything is driven from a React dashboard at `http://localhost:3030` — metric cards, Chart.js charts, progress and quota bars, toasts.
+Everything is driven from a React dashboard at `http://localhost:4040` — metric cards, Chart.js charts, progress and quota bars, toasts.
 
 ## Requirements
 
@@ -44,7 +44,7 @@ npx --yes @danhachuel/jobfinder@<VERSAO>
 
 ## Usage
 
-1. Start the app → it opens `http://localhost:3030`
+1. Start the app → it opens `http://localhost:4040`
 2. **Integrações** → connect LinkedIn:
    - **Recommended:** create your LinkedIn app ([Criar API Oficial do LinkedIn](legal/)) → paste Client ID/Secret → run the OAuth flow
    - **Fallback:** export cookies with ["Get cookies.txt LOCALLY"](https://chromewebstore.google.com/) and upload `cookies.txt`
@@ -87,7 +87,7 @@ No cloud sync, no telemetry, no accounts.
 
 ```bash
 npm install                       # root (server) deps
-npm run dev                       # API (3030) + UI dev server (5173) in parallel
+npm run dev                       # API (4040) + UI dev server (5173) in parallel
 npm run build                     # builds the UI into src/ui/dist
 npm start                         # production-style start (serves the built UI)
 ```

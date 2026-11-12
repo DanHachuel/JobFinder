@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 First functional release of JobFinder (deliverables of PRD §12):
 
-- App installable via `npx @danhachuel/jobfinder` with a local React+Vite+Tailwind UI at `localhost:3030`
+- App installable via `npx @danhachuel/jobfinder` with a local React+Vite+Tailwind UI at `localhost:4040`
 - Módulo 1 (Postagens): manual + agendada + geração por LLM (OpenAI, Anthropic, DeepSeek, Ollama local)
 - Módulo 2 (Conexões & DMs): convites com variáveis, limite semanal de 100, cascatas com até 5 mensagens/dia
 - Módulo 3 (Vagas): match semântico currículo↔vaga, busca com score, Easy Apply em dry-run (Playwright opcional para live)
@@ -28,7 +28,7 @@ First functional release of JobFinder (deliverables of PRD §12):
 
 ### Added
 
-- **npx launcher** `jobfinder` (`scripts/cli.mjs`): `install` creates the `~/.jobfinder/` skeleton (idempotent, never overwrites data); the default command starts the local server on `localhost:3030`. Flags: `--port`, `--host`, `--data-dir`, `--open/--no-open`, `--dry-run`, `--version`, `--help`.
+- **npx launcher** `jobfinder` (`scripts/cli.mjs`): `install` creates the `~/.jobfinder/` skeleton (idempotent, never overwrites data); the default command starts the local server on `localhost:4040`. Flags: `--port`, `--host`, `--data-dir`, `--open/--no-open`, `--dry-run`, `--version`, `--help`.
 - **Root `package.json`**: `@danhachuel/jobfinder`, ESM, `bin.jobfinder`, scripts `dev`/`dev:server`/`dev:ui`/`build`/`start`/`install`, engines `node >= 20.19`. Dependencies: `express`, `mammoth`, `pdfjs-dist`; optional: `playwright` (loaded on demand for Easy Apply); dev: `concurrently`.
 - **Local JSON store bootstrap** (`src/server/storage/bootstrap.mjs`): `config.json` (LLM provider, LinkedIn auth mode, rate limits, dry-run), `channels/topics/posts/connections/dm-cascades/jobs/applications/resume.json`, `logs/`, plus 3 seed topics. Data directory: `~/.jobfinder/`, overridable via `JOBFINDER_HOME` or `--data-dir`.
 - **Backend core**:
@@ -65,7 +65,7 @@ First functional release of JobFinder (deliverables of PRD §12):
   - `components/Layout.jsx` + `Header.jsx` — shell com título da página, badge de dry-run/conectado, "Ver tutorial" e avatar.
   - `components/` — `MetricCard`, `ProgressBar`, `QuotaBar` (Goal Gradient), `StatusBadge`, `Spinner`, `EmptyState`, `Modal`, `Toast` e charts Chart.js (`BarsChart` horizontais + `DoughnutChart`).
   - Páginas (9 rotas): `Dashboard` (cards, quotas, 2 gráficos, checklist de onboarding, atividade), `Postagens` (compositor manual + preview lado a lado + histórico com filtros/paginação), `Agendar` (geração LLM com preview obrigatório, fila com barra de progresso), `Conexoes` (busca por palavra-chave, seleção em lote, `{{variáveis}}`, barra "X de 100"), `DmCascades` (até 5 mensagens/dia, delays em dias, aprovação manual, pausa por resposta, "X de 5 hoje"), `Vagas` (upload de currículo PDF/DOCX/TXT, match score + lacunas, salvar/descartar, candidatar dry-run), `Candidaturas` (histórico, relatório, retry, cota diária), `Integracoes` (OAuth oficial, upload de cookies.txt com passo a passo, canais ativar/remover, avisos de risco, suporte), `Config` (LLM, limites de rate, servidor, temas CRUD).
-  - `vite.config.js` — dev em :5173 com proxy `/api` → :3030; build em `src/ui/dist` (servido pelo backend em produção).
+  - `vite.config.js` — dev em :5173 com proxy `/api` → :4040; build em `src/ui/dist` (servido pelo backend em produção).
 - **CI/CD**: `.github/workflows/publish-npm.yml` (adaptado do modelo Thunderbolt): triggers `workflow_dispatch` (inputs `version`, `dist_tag=next`) + push de tags `v*`; validação da versão visual `MAJOR.MINOR.PATCH` com PATCH de 2 dígitos, `npm ci`, build da UI, `node --check` do launcher, checagem de metadados do pacote (nome `@danhachuel/jobfinder`, `bin.jobfinder`), `npm pack --dry-run`, smoke test do `install` (skeleton JSON completo) e boot da API em dry-run, publish com `--tag next`, verificação do tarball publicada e promoção a `latest` no push de tag.
 - **`legal/` (em inglês)**: `index.html` (índice + fatos-chave), `privacy.html` (política de privacidade) e `terms.html` (termos de uso), adaptados do Thunderbolt para o domínio JobFinder, com as menções obrigatórias: uso por conta e risco do usuário, possível violação dos Termos de Serviço do LinkedIn, armazenamento 100% local (sem coleta de dados), nenhum dado transmitido a servidores do JobFinder, cookies de sessão armazenados localmente e nunca compartilhados, usuário responsável por respeitar os limites de rate do LinkedIn.
 - **README.md completo**: o que é/onde o faz, requisitos (Node ≥ 20.19, Playwright e Ollama opcionais), comandos de instalação (CMD/MobaXterm + normal), fluxo de uso, flags do launcher, layout de `~/.jobfinder/`, desenvolvimento, política de publicação (versionamento visual + GitHub Actions) e links legais. Remoção dos `.gitkeep` obsoletos e `*.tgz` adicionado ao `.gitignore`.

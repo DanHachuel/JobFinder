@@ -6,7 +6,7 @@
  *
  * Env:
  *   JOBFINDER_DATA_DIR   data directory (default ~/.jobfinder)
- *   JOBFINDER_PORT       port (default 3030, or config.json "port")
+ *   JOBFINDER_PORT       port (default 4040, or config.json "port")
  *   JOBFINDER_HOST       bind address (default 127.0.0.1, or config.json "host")
  *   JOBFINDER_DRY_RUN=1  force dry-run mode (no real external actions)
  */
@@ -40,7 +40,7 @@ export async function start() {
 
   const app = createApp(context);
 
-  const port = Number(process.env.JOBFINDER_PORT) || Number(config.port) || 3030;
+  const port = Number(process.env.JOBFINDER_PORT) || Number(config.port) || 4040;
   const host = process.env.JOBFINDER_HOST || config.host || '127.0.0.1';
 
   const { visual, npm } = readPkgVersion();

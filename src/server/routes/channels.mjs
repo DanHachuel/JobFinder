@@ -126,7 +126,7 @@ export function channelsRoutes({ store, logger, config, rateLimiter }) {
         );
       }
       const state = newId('oauth');
-      const uri = redirectUri ?? creds.redirectUri ?? config.linkedin?.officialRedirectUri ?? 'http://127.0.0.1:3030/api/channels/oauth/callback';
+      const uri = redirectUri ?? creds.redirectUri ?? config.linkedin?.officialRedirectUri ?? 'http://127.0.0.1:4040/api/channels/oauth/callback';
       oauthStates.set(state, { channelId: channel?.id ?? null, redirectUri: uri, createdAt: Date.now() });
       const url = LinkedInOfficialClient.authorizationUrl({
         clientId: creds.clientId,

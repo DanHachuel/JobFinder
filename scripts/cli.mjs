@@ -4,13 +4,13 @@
  *
  * Commands:
  *   jobfinder install          create ~/.jobfinder/ skeleton (safe to re-run)
- *   jobfinder                  start the local server (backend + UI) on localhost:3030
+ *   jobfinder                  start the local server (backend + UI) on localhost:4040
  *   jobfinder start            alias of the default command
  *   jobfinder --version        print version info
  *   jobfinder --help           print usage
  *
  * Flags:
- *   --port <n>         override the API/UI port (default: 3030)
+ *   --port <n>         override the API/UI port (default: 4040)
  *   --host <addr>      bind address (default: 127.0.0.1)
  *   --data-dir <path>  override the data directory (default: ~/.jobfinder or $JOBFINDER_HOME)
  *   --open / --no-open open/do not open the browser on start
@@ -47,12 +47,12 @@ JobFinder — local-first LinkedIn automation
 
 Usage:
   jobfinder install           Create the local JSON data store (~/.jobfinder/)
-  jobfinder [start] [flags]   Start the app at http://localhost:3030
+  jobfinder [start] [flags]   Start the app at http://localhost:4040
   jobfinder --version         Show version
   jobfinder --help            Show this help
 
 Flags:
-  --port <n>         Port to listen on (default 3030)
+  --port <n>         Port to listen on (default 4040)
   --host <addr>      Bind address (default 127.0.0.1)
   --data-dir <path>  Data directory (default ~/.jobfinder, override with JOBFINDER_HOME)
   --open             Open the browser after start (default)
@@ -167,7 +167,7 @@ async function commandStart({ port, host, dataDir, open, dryRun }) {
   if (host) env.JOBFINDER_HOST = host;
 
   printBanner();
-  const listenPort = port || Number(process.env.JOBFINDER_PORT) || 3030;
+  const listenPort = port || Number(process.env.JOBFINDER_PORT) || 4040;
   const listenHost = host || process.env.JOBFINDER_HOST || '127.0.0.1';
   const url = `http://${listenHost === '0.0.0.0' ? 'localhost' : listenHost}:${listenPort}`;
   console.log(` Data directory : ${resolved}`);

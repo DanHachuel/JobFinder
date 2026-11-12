@@ -183,7 +183,7 @@ export default function Integracoes() {
         <h3 className="text-base font-semibold text-gray-800">Método recomendado — API Oficial (OAuth 2.0)</h3>
         <p className="mt-1 text-xs text-gray-500">
           Crie seu app no LinkedIn (botão acima), copie o <strong>Client ID</strong> e o <strong>Client Secret</strong> e registre o redirect
-          <code className="mx-1 rounded bg-gray-100 px-1">http://127.0.0.1:3030/api/channels/oauth/callback</code>. As credenciais ficam apenas no arquivo local
+          <code className="mx-1 rounded bg-gray-100 px-1">http://127.0.0.1:4040/api/channels/oauth/callback</code>. As credenciais ficam apenas no arquivo local
           <code className="mx-1 rounded bg-gray-100 px-1">~/.jobfinder/channels.json</code>.
         </p>
 

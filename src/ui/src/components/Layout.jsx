@@ -62,7 +62,7 @@ export default function Layout({ children }) {
     <AppStateContext.Provider value={{ health, linkedin, refresh: () => window.location.reload() }}>
       {/* Dashboard shell: fixed viewport, independent scroll per region */}
       <div className="flex h-screen w-full overflow-hidden overflow-x-hidden bg-gray-100">
-        <Sidebar officialApiConfigured={Boolean(linkedin?.channel?.official?.hasAccessToken)} version={health?.version} />
+        <Sidebar officialApiConfigured={Boolean(linkedin?.channel?.official?.hasAccessToken)} />
         <main className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
           <Header title={title} dryRun={dryRun} connected={Boolean(linkedin?.connected)} mode={linkedin?.mode} />
           <div key={location.pathname} className="flex-1 overflow-y-auto overflow-x-hidden p-8">

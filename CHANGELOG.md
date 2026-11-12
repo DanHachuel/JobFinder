@@ -6,6 +6,12 @@ All notable changes to JobFinder are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.03] — 2026-11-12
+
+### Fixed
+
+- **Versão dinâmica ao lado do logo na sidebar**: a versão agora é injetada no build via `define.__APP_VERSION__` no `vite.config.js`, lida do `package.json` da raiz (fonte única da verdade), e exibida como badge `vX.Y.ZZ` ao lado de "JobFinder" (borda `indigo-400/30`, fundo `indigo-500/10` translúcido, texto `text-[10px]` — padrão visual LeadMaster). Tooltip mostra também a forma canônica do npm (`0.1.03` → `0.1.3`). O rodapé da sidebar deixou de exibir a versão duplicada e mantém apenas "100% local". O workflow faz o build da UI após o bump de versão, então cada release reflete o número correto sem edição manual.
+
 ## [0.1.02] — 2026-11-12
 
 ### Fixed

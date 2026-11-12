@@ -1,7 +1,8 @@
 /**
  * Sidebar (LeadMaster reference): dark #1e1b4b, grouped navigation,
- * collapsible subgroups (Hick's law) and the persistent
- * "Criar API Oficial do LinkedIn" button under Integrações.
+ * collapsible subgroups (Hick's law), version badge next to the logo
+ * (injected at build time from the root package.json via Vite define)
+ * and the persistent "Criar API Oficial do LinkedIn" button.
  */
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
@@ -21,6 +22,14 @@ import {
 
 const LINKEDIN_API_URL =
   'https://www.linkedin.com/help/linkedin/answer/a526048/acesso-as-apis-do-linkedin?lang=pt';
+
+/** npm canonical form of the visual version: 0.1.03 -> 0.1.3 */
+function canonicalVersion(visual) {
+  return String(visual ?? '')
+    .split('.')
+    .map((part) => String(Number(part)))
+    .join('.');
+}
 
 function SectionLabel({ children }) {
   return <li className="sidebar-section">{children}</li>;
@@ -67,14 +76,20 @@ function SubItem({ to, children }) {
   );
 }
 
-export default function Sidebar({ officialApiConfigured, version }) {
+export default function Sidebar({ officialApiConfigured }) {
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col bg-[#1e1b4b] text-white">
-      {/* Logo */}
-      <div className="border-b border-white/10 p-6">
+      {/* Logo + version badge (version injected at build time from the root package.json) */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-white/10 p-6">
         <h1 className="text-2xl font-bold tracking-tight">
           Job<span className="text-[#818cf8]">Finder</span>
         </h1>
+        <span
+          className="rounded border border-indigo-400/30 bg-indigo-500/10 px-2 py-0.5 text-[10px] font-medium text-indigo-300"
+          title={`Versao ${__APP_VERSION__} (npm: ${canonicalVersion(__APP_VERSION__)})`}
+        >
+          v{__APP_VERSION__}
+        </span>
       </div>
 
       {/* Navigation */}
@@ -137,7 +152,7 @@ export default function Sidebar({ officialApiConfigured, version }) {
         </ul>
       </nav>
 
-      {/* Footer: local-first badge — always visible at the bottom */}
+      {/* Footer: local-first badge (version lives in the logo badge) */}
       <div className="mt-auto border-t border-white/10 p-4">
         <a
           href="https://github.com/DanHachuel/JobFinder"
@@ -145,7 +160,7 @@ export default function Sidebar({ officialApiConfigured, version }) {
           rel="noreferrer noopener"
           className="flex items-center justify-center gap-2 rounded-lg bg-white/5 px-4 py-2.5 text-xs text-gray-300 transition hover:bg-white/10"
         >
-          v{version ?? '0.1.00'} · 100% local
+          100% local
         </a>
       </div>
     </aside>

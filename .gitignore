@@ -1,0 +1,37 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+src/ui/dist/
+*.tsbuildinfo
+*.tgz
+
+# local runtime storage (NEVER commit — lives in ~/.jobfinder or ./storage in dev)
+storage/
+.jobfinder/
+
+# secrets & environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+cookies.txt
+
+# logs
+logs/
+*.log
+npm-debug.log*
+
+# editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# coverage / cache
+coverage/
+.cache/
+.eslintcache

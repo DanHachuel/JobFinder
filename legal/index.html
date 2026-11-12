@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="JobFinder legal documents: privacy policy and terms of use for the local-first LinkedIn automation app.">
+    <title>Legal — JobFinder</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+        }
+        .badge {
+            background: linear-gradient(135deg, #4338ca 0%, #818cf8 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 50px;
+            display: inline-block;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+        h1 { color: #1e1b4b; font-size: 2.5em; margin-bottom: 10px; }
+        h2 { color: #444; margin: 25px 0 15px 0; font-size: 1.8em; }
+        p { color: #666; line-height: 1.6; margin: 10px 0; }
+        ul, ol { margin: 10px 0 10px 30px; color: #666; line-height: 1.6; }
+        li { margin: 5px 0; }
+        a { color: #4338ca; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .links {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            text-align: center;
+        }
+        .links a { color: #4338ca; margin: 0 15px; font-weight: 500; }
+        .contact {
+            background: #fff3e0;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            line-height: 1.7;
+        }
+        .contact a { color: #b45309; }
+        footer { text-align: center; color: rgba(255,255,255,0.8); margin-top: 30px; line-height: 1.6; }
+        @media (max-width: 600px) {
+            .card { padding: 25px; }
+            h1 { font-size: 1.8em; }
+            h2 { font-size: 1.5em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <main class="card">
+            <div class="badge">⚖️ Legal Documents</div>
+            <h1>JobFinder — Legal</h1>
+            <p><strong>Last updated:</strong> November 12, 2026</p>
+            <p>
+                <strong>JobFinder</strong> is a local-first, single-user automation tool for LinkedIn:
+                it publishes posts, sends connection invitations and direct-message sequences, and
+                helps you apply to jobs. It runs entirely on your own computer
+                (<code>localhost:3030</code>) and stores everything in local JSON files under
+                <code>~/.jobfinder/</code>.
+            </p>
+
+            <h2>Documents</h2>
+            <ul>
+                <li><a href="privacy.html">Privacy Policy</a> — what data exists, where it lives, and who can see it (answer: only you).</li>
+                <li><a href="terms.html">Terms of Use</a> — the rules, responsibilities and risks of using JobFinder.</li>
+            </ul>
+
+            <h2>Key facts</h2>
+            <ul>
+                <li><strong>100% local storage:</strong> posts, invitations, DM cascades, jobs, applications, your resume and every credential are stored only on your machine, in JSON files.</li>
+                <li><strong>No JobFinder servers:</strong> the developer operates no backend for this app. No data is ever transmitted to the developer or to any JobFinder server.</li>
+                <li><strong>Cookies stay local:</strong> if you connect via session cookies (the "Get cookies.txt LOCALLY" fallback), they are saved in <code>~/.jobfinder/channels.json</code> and are never shared.</li>
+                <li><strong>Use at your own risk:</strong> automation may violate LinkedIn's Terms of Service and can lead to account restrictions. You are responsible for respecting LinkedIn's rate limits and for every action taken with your account.</li>
+            </ul>
+
+            <div class="links">
+                <a href="privacy.html">🔒 Privacy Policy</a> |
+                <a href="terms.html">📜 Terms of Use</a>
+            </div>
+
+            <div class="contact">
+                <strong>📧 Developer:</strong> Dan Hachuel<br>
+                <strong>📩 Contact:</strong> <a href="mailto:danchannels96@gmail.com">danchannels96@gmail.com</a><br>
+                <strong>🔗 Source:</strong> <a href="https://github.com/DanHachuel/JobFinder">github.com/DanHachuel/JobFinder</a>
+            </div>
+        </main>
+        <footer>
+            <p>© 2026 JobFinder (DanHachuel) · Local-first LinkedIn automation · No account, no cloud, no tracking.</p>
+        </footer>
+    </div>
+</body>
+</html>

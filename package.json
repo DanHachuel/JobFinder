@@ -1,0 +1,59 @@
+{
+  "name": "@danhachuel/jobfinder",
+  "version": "0.0.01",
+  "description": "JobFinder — local-first LinkedIn automation (posts, connections/DMs, job matching) with a React + Vite UI. Single-user, JSON storage, no external database.",
+  "keywords": [
+    "linkedin",
+    "automation",
+    "jobs",
+    "local-first",
+    "cli",
+    "npx"
+  ],
+  "type": "module",
+  "license": "MIT",
+  "author": "Dan Pariente Hachuel",
+  "main": "src/server/index.mjs",
+  "bin": {
+    "jobfinder": "scripts/cli.mjs"
+  },
+  "files": [
+    "scripts/",
+    "src/server/",
+    "src/ui/dist/",
+    "CHANGELOG.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "install": "node scripts/cli.mjs install",
+    "dev": "concurrently -k -n server,ui -c blue,magenta \"npm:dev:server\" \"npm:dev:ui\"",
+    "dev:server": "node --watch src/server/index.mjs",
+    "dev:ui": "npm --prefix src/ui run dev",
+    "build": "npm --prefix src/ui run build",
+    "start": "node scripts/cli.mjs start",
+    "smoke": "node scripts/cli.mjs install && node scripts/cli.mjs --version"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "dependencies": {
+    "express": "^5.3.0",
+    "mammoth": "^1.13.0",
+    "pdfjs-dist": "^6.5.438"
+  },
+  "optionalDependencies": {
+    "playwright": "^1.65.0"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.7"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DanHachuel/JobFinder.git"
+  },
+  "homepage": "https://github.com/DanHachuel/JobFinder#readme",
+  "bugs": {
+    "url": "https://github.com/DanHachuel/JobFinder/issues"
+  }
+}

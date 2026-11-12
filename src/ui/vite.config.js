@@ -1,0 +1,22 @@
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
+
+// During dev, Vite serves the UI on :5173 and proxies /api to the Node
+// server on :3030. In production the server itself serves dist/.
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:3030',
+        changeOrigin: true,
+      },
+    },
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+  },
+});

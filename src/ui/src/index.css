@@ -1,0 +1,69 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+/*
+ * JobFinder — visual base ported from the LeadMaster reference:
+ * dark sidebar #1e1b4b, indigo accent #818cf8, Inter typography,
+ * gray-100 app background, white cards with soft shadows.
+ */
+@theme {
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --color-brand-sidebar: #1e1b4b;
+  --color-brand-sidebar-hover: rgba(255, 255, 255, 0.05);
+  --color-brand-sidebar-active: rgba(255, 255, 255, 0.1);
+  --color-brand-accent: #818cf8;
+  --color-brand-accent-strong: #6366f1;
+
+  --color-app-bg: #f3f4f6;
+}
+
+/* Sidebar links (same behavior as the LeadMaster reference). */
+@layer components {
+  .sidebar-link {
+    @apply flex items-center px-6 py-2.5 text-sm text-gray-300 transition-colors;
+  }
+  .sidebar-link:hover {
+    background-color: var(--color-brand-sidebar-hover);
+  }
+  .sidebar-link.active {
+    background-color: var(--color-brand-sidebar-active);
+    border-left: 3px solid var(--color-brand-accent);
+    color: #fff;
+  }
+  .sidebar-section {
+    @apply px-6 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500;
+  }
+  .card {
+    @apply rounded-xl border border-gray-100 bg-white p-5 shadow-sm;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-red-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-300 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .input {
+    @apply w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 transition placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100;
+  }
+  .label {
+    @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500;
+  }
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-app-bg);
+}
+
+/* Chart.js needs a sized wrapper. */
+.chart-box {
+  position: relative;
+  height: 16rem;
+}

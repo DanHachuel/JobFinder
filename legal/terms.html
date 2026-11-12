@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="JobFinder Terms of Use — local-first LinkedIn automation, use at your own risk.">
+    <title>Terms of Use — JobFinder</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+        }
+        .badge {
+            background: linear-gradient(135deg, #4338ca 0%, #818cf8 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 50px;
+            display: inline-block;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+        h1 { color: #1e1b4b; font-size: 2.5em; margin-bottom: 10px; }
+        h2 { color: #444; margin: 25px 0 15px 0; font-size: 1.8em; }
+        p { color: #666; line-height: 1.6; margin: 10px 0; }
+        ul, ol { margin: 10px 0 10px 30px; color: #666; line-height: 1.6; }
+        li { margin: 5px 0; }
+        code {
+            background: #f1f5f9;
+            color: #334155;
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+        a { color: #4338ca; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .warning {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 12px;
+            padding: 16px 18px;
+            margin: 18px 0;
+            color: #991b1b;
+            line-height: 1.6;
+        }
+        .links {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            text-align: center;
+        }
+        .links a { color: #4338ca; margin: 0 15px; font-weight: 500; }
+        .contact {
+            background: #fff3e0;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            line-height: 1.7;
+        }
+        .contact a { color: #b45309; }
+        footer { text-align: center; color: rgba(255,255,255,0.8); margin-top: 30px; line-height: 1.6; }
+        @media (max-width: 600px) {
+            .card { padding: 25px; }
+            h1 { font-size: 1.8em; }
+            h2 { font-size: 1.5em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <main class="card">
+            <div class="badge">📜 Legal Document</div>
+            <h1>Terms of Use</h1>
+            <p><strong>Last updated:</strong> November 12, 2026</p>
+
+            <h2>1. Acceptance</h2>
+            <p>
+                By installing, configuring or using <strong>JobFinder</strong> (the "App"), you
+                confirm that you have read, understood and fully accepted these Terms of Use. If
+                you do not agree with any clause, uninstall the App and stop using it.
+            </p>
+
+            <h2>2. What the App is</h2>
+            <p>
+                JobFinder is a <strong>local-first, single-user tool</strong> that runs on your
+                own computer (<code>localhost:3030</code>) and stores everything in JSON files
+                under <code>~/.jobfinder/</code>. It automates three LinkedIn workflows: post
+                publishing (manual, scheduled and LLM-generated), outreach (connection
+                invitations and direct-message sequences) and job applications (matching,
+                search and Easy Apply, dry-run by default).
+            </p>
+            <p>
+                The App is provided <strong>"as is"</strong>, without warranties of any kind,
+                including fitness for a particular purpose, uninterrupted availability or
+                absence of errors. You are solely responsible for evaluating whether its
+                results meet your needs.
+            </p>
+
+            <div class="warning">
+                <strong>⚠ Use at your own risk.</strong> Automating LinkedIn actions
+                <strong>may violate LinkedIn's Terms of Service</strong> and can lead to
+                temporary or permanent restrictions on your account. JobFinder is not affiliated
+                with, endorsed by or connected to LinkedIn. The official LinkedIn API is the
+                recommended integration; the cookie-based fallback exists because the official
+                API does not cover outreach and job applications.
+            </div>
+
+            <h2>3. Your responsibilities</h2>
+            <p>You are <strong>solely responsible</strong> for:</p>
+            <ul>
+                <li><strong>Your account:</strong> the LinkedIn account you automate and every action taken with it.</li>
+                <li><strong>Rate limits:</strong> respecting LinkedIn's limits (the App ships with conservative defaults — 100 invitations/week, 5 DMs/day, 20 applications/day, human-like delays — but you may change them, and you bear the consequences).</li>
+                <li><strong>Credentials:</strong> the OAuth secrets, cookies and API keys you configure, including keeping <code>~/.jobfinder/</code> private and revoking anything you stop using.</li>
+                <li><strong>Content:</strong> the text of your posts, invitations and DMs, including compliance with applicable law, platform rules, copyright and third-party rights.</li>
+                <li><strong>Third-party services:</strong> any cost or quota consumed at the LLM providers you configure (OpenAI, Anthropic, DeepSeek, Ollama).</li>
+            </ul>
+            <p><strong>Prohibited uses</strong> include spam, mass unsolicited messaging, engagement manipulation, scraping for data resale, impersonation and any activity that violates the terms of service of LinkedIn or of any integrated provider.</p>
+
+            <h2>4. Limitation of liability</h2>
+            <p>To the maximum extent permitted by law, JobFinder and its developer are <strong>not liable</strong> for:</p>
+            <ul>
+                <li><strong>Account restrictions or bans</strong> on LinkedIn resulting from automation, content you publish or the platform's interpretation of its own rules;</li>
+                <li><strong>Costs accrued</strong> at third-party LLM or automation providers, including accidental or excessive usage caused by your configuration;</li>
+                <li><strong>Indirect damages, lost profits or data loss</strong> arising from the use or inability to use the App;</li>
+                <li><strong>Changes, outages or discontinuation</strong> of LinkedIn features, internal APIs or LLM providers the App depends on.</li>
+            </ul>
+
+            <h2>5. Intellectual property</h2>
+            <p>
+                The App is provided for your personal use. Its code and structure may not be
+                resold, sublicensed or incorporated into commercial products without prior
+                written permission from the developer. The content you create with the App
+                remains yours, subject to the rights of third parties over any source material
+                and to the conditions of each provider you configure.
+            </p>
+
+            <h2>6. Changes to these terms</h2>
+            <p>
+                These terms may be updated at any time; the date at the top of the page
+                identifies the current version. Continued use of the App after an update
+                constitutes acceptance of the revised version.
+            </p>
+
+            <h2>7. Governing law</h2>
+            <p>
+                These terms are governed by the laws of the <strong>Federative Republic of
+                Brazil</strong>. Any dispute shall be resolved by the court of the developer's
+                domicile in Brazil.
+            </p>
+
+            <h2>8. Contact</h2>
+            <p>
+                Questions about these terms can be sent to
+                <a href="mailto:danchannels96@gmail.com">danchannels96@gmail.com</a>.
+                See also the <a href="privacy.html">Privacy Policy</a>.
+            </p>
+
+            <div class="links">
+                <a href="index.html">🏠 Back to Legal Home</a> |
+                <a href="privacy.html">🔒 Privacy Policy</a>
+            </div>
+
+            <div class="contact">
+                <strong>📧 Developer:</strong> Dan Hachuel<br>
+                <strong>📩 Contact:</strong> <a href="mailto:danchannels96@gmail.com">danchannels96@gmail.com</a>
+            </div>
+        </main>
+        <footer>
+            <p>© 2026 JobFinder (DanHachuel) · Not affiliated with LinkedIn · Automate at your own risk.</p>
+        </footer>
+    </div>
+</body>
+</html>

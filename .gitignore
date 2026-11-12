@@ -8,8 +8,8 @@ src/ui/dist/
 *.tgz
 
 # local runtime storage (NEVER commit — lives in ~/.jobfinder or ./storage in dev)
-storage/
-.jobfinder/
+/storage/
+/.jobfinder/
 
 # secrets & environment
 .env

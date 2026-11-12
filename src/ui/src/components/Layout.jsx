@@ -60,11 +60,12 @@ export default function Layout({ children }) {
 
   return (
     <AppStateContext.Provider value={{ health, linkedin, refresh: () => window.location.reload() }}>
-      <div className="flex min-h-screen bg-gray-100">
+      {/* Dashboard shell: fixed viewport, independent scroll per region */}
+      <div className="flex h-screen w-full overflow-hidden overflow-x-hidden bg-gray-100">
         <Sidebar officialApiConfigured={Boolean(linkedin?.channel?.official?.hasAccessToken)} version={health?.version} />
-        <main className="flex min-w-0 flex-1 flex-col">
+        <main className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
           <Header title={title} dryRun={dryRun} connected={Boolean(linkedin?.connected)} mode={linkedin?.mode} />
-          <div key={location.pathname} className="flex-1 overflow-y-auto p-8">
+          <div key={location.pathname} className="flex-1 overflow-y-auto overflow-x-hidden p-8">
             {children}
             <footer className="mt-8 flex items-center justify-between border-t border-gray-200 pt-4 text-xs text-gray-400">
               <span>© 2026 JobFinder (DanHachuel) · execução 100% local</span>

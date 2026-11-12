@@ -69,7 +69,7 @@ function SubItem({ to, children }) {
 
 export default function Sidebar({ officialApiConfigured, version }) {
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col bg-[#1e1b4b] text-white">
+    <aside className="flex h-full w-64 shrink-0 flex-col bg-[#1e1b4b] text-white">
       {/* Logo */}
       <div className="border-b border-white/10 p-6">
         <h1 className="text-2xl font-bold tracking-tight">
@@ -137,8 +137,8 @@ export default function Sidebar({ officialApiConfigured, version }) {
         </ul>
       </nav>
 
-      {/* Footer: local-first badge */}
-      <div className="border-t border-white/10 p-4">
+      {/* Footer: local-first badge — always visible at the bottom */}
+      <div className="mt-auto border-t border-white/10 p-4">
         <a
           href="https://github.com/DanHachuel/JobFinder"
           target="_blank"

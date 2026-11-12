@@ -6,6 +6,12 @@ All notable changes to JobFinder are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.02] — 2026-11-12
+
+### Fixed
+
+- **Sidebar fixa com scroll independente na área de conteúdo**: refatoração do shell para o padrão de dashboard clássico — raiz `flex h-screen overflow-hidden`, sidebar `h-full` (navegação com `overflow-y-auto` interno e rodapé fixo via `mt-auto`), `<main>` `flex-1 flex-col h-full overflow-hidden` e o wrapper de conteúdo com `flex-1 overflow-y-auto overflow-x-hidden`. A sidebar não rola mais com a página, o rodapé da sidebar (versão + "100% local") fica sempre visível e não há scroll horizontal nem layout shift na troca de rotas. Colapso responsivo da sidebar em telas < 768 px fica como item futuro (app é desktop-first).
+
 ## [0.1.01] — 2026-11-12
 
 ### Fixed

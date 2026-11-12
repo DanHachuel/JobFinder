@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { createApp } from './app.mjs';
 import { createContext } from './context.mjs';
 import { resolveDataDir, UI_DIST } from './paths.mjs';
-import { startScheduler } from './services/posting/scheduler.mjs';
+import { startWorkers } from './services/workers.mjs';
 
 function readPkgVersion() {
   try {
@@ -68,9 +68,8 @@ export async function start() {
     process.exit(1);
   });
 
-  // Background workers: post scheduler (DM cascades and the apply queue
-  // follow in the next etapas).
-  startScheduler(context);
+  // Background workers: post scheduler + DM cascade engine + inbox monitoring.
+  startWorkers(context);
 
   const shutdown = (signal) => {
     logger.info('shutdown', `received ${signal}`);

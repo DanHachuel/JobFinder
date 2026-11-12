@@ -11,6 +11,11 @@ import { configRoutes } from './config.mjs';
 import { channelsRoutes } from './channels.mjs';
 import { topicsRoutes } from './topics.mjs';
 import { postsRoutes } from './posts.mjs';
+import { outreachRoutes } from './outreach.mjs';
+import { dmsRoutes } from './dms.mjs';
+import { jobsRoutes } from './jobs.mjs';
+import { applicationsRoutes } from './applications.mjs';
+import { dashboardRoutes } from './dashboard.mjs';
 
 export function createApiRouter(ctx) {
   const router = Router();
@@ -20,6 +25,11 @@ export function createApiRouter(ctx) {
   router.use(channelsRoutes(ctx));
   router.use(topicsRoutes(ctx));
   router.use(postsRoutes(ctx));
+  router.use(outreachRoutes(ctx));
+  router.use(dmsRoutes(ctx));
+  router.use(jobsRoutes(ctx));
+  router.use(applicationsRoutes(ctx));
+  router.use(dashboardRoutes(ctx));
 
   return router;
 }

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="JobFinder Privacy Policy — a local-first application. All data stays on the user's machine.">
+    <title>Privacy Policy — JobFinder</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+        }
+        .badge {
+            background: linear-gradient(135deg, #4338ca 0%, #818cf8 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 50px;
+            display: inline-block;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+        h1 { color: #1e1b4b; font-size: 2.5em; margin-bottom: 10px; }
+        h2 { color: #444; margin: 25px 0 15px 0; font-size: 1.8em; }
+        h3 { color: #555; margin: 20px 0 10px 0; font-size: 1.4em; }
+        p { color: #666; line-height: 1.6; margin: 10px 0; }
+        ul, ol { margin: 10px 0 10px 30px; color: #666; line-height: 1.6; }
+        li { margin: 5px 0; }
+        code {
+            background: #f1f5f9;
+            color: #334155;
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+        a { color: #4338ca; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .links {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            text-align: center;
+        }
+        .links a { color: #4338ca; margin: 0 15px; font-weight: 500; }
+        .contact {
+            background: #fff3e0;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            line-height: 1.7;
+        }
+        .contact a { color: #b45309; }
+        footer { text-align: center; color: rgba(255,255,255,0.8); margin-top: 30px; line-height: 1.6; }
+        @media (max-width: 600px) {
+            .card { padding: 25px; }
+            h1 { font-size: 1.8em; }
+            h2 { font-size: 1.5em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <main class="card">
+            <div class="badge">🔒 Legal Document</div>
+            <h1>Privacy Policy</h1>
+            <p><strong>Effective date:</strong> November 12, 2026</p>
+            <p>
+                This Privacy Policy explains how <strong>JobFinder</strong> — a local-first
+                automation tool for LinkedIn (posts, connections/DMs and job applications) —
+                handles data. JobFinder is a single-user desktop application installed via
+                <code>npx</code> and served on your own machine. <strong>The developer operates
+                no server that receives or stores your data.</strong>
+            </p>
+
+            <h2>1. Data processed</h2>
+            <p>All of the data below is created, processed and stored <strong>exclusively on your computer</strong>, inside the data directory <code>~/.jobfinder/</code>:</p>
+            <ul>
+                <li><strong>LinkedIn credentials</strong> — OAuth tokens (official API) or session cookies (fallback via "Get cookies.txt LOCALLY"), stored in <code>~/.jobfinder/channels.json</code> and <code>~/.jobfinder/config.json</code>.</li>
+                <li><strong>LLM configuration</strong> — provider (OpenAI, Anthropic, DeepSeek or local Ollama), model and API key, stored in <code>~/.jobfinder/config.json</code>.</li>
+                <li><strong>Content you create</strong> — topics, post drafts, scheduled posts and publishing history (<code>topics.json</code>, <code>posts.json</code>).</li>
+                <li><strong>Outreach data</strong> — connection invitations and DM cascade sequences (<code>connections.json</code>, <code>dm-cascades.json</code>).</li>
+                <li><strong>Job data</strong> — job searches, matches, your parsed resume and application reports (<code>jobs.json</code>, <code>applications.json</code>, <code>resume.json</code>).</li>
+                <li><strong>Local logs</strong> — daily JSONL files in <code>~/.jobfinder/logs/</code> used by the app's own activity feed.</li>
+            </ul>
+
+            <h2>2. Local storage</h2>
+            <p>
+                Everything the app knows lives in JSON files on your disk under
+                <code>~/.jobfinder/</code>. There is no cloud account, no remote database, no
+                telemetry and no analytics. Deleting that folder removes the app's entire state.
+            </p>
+
+            <h2>3. What leaves your machine (and when)</h2>
+            <p>Data only leaves your computer when you explicitly configure and trigger an action:</p>
+            <ul>
+                <li><strong>LinkedIn requests</strong> — the requests needed to publish posts, send invitations, send DMs and apply to jobs are sent directly from your machine to LinkedIn, using your own credentials. They are never routed through the developer.</li>
+                <li><strong>LLM requests</strong> — post/outreach text generation requests go directly from your machine to the LLM provider you configured (OpenAI, Anthropic, DeepSeek, or a local Ollama instance that never leaves your network).</li>
+                <li><strong>Official LinkedIn API</strong> — if you connect via OAuth, LinkedIn receives the standard tokens required for the authorization code flow.</li>
+            </ul>
+            <p>
+                <strong>No data is transmitted to JobFinder servers</strong> — the developer has
+                no JobFinder server and receives none of your content, credentials or analytics.
+            </p>
+
+            <h2>4. Session cookies</h2>
+            <p>
+                When you use the cookie-based fallback, your <code>li_at</code> and
+                <code>JSESSIONID</code> cookies (plus any other LinkedIn cookies present in the
+                exported file) are stored locally in <code>~/.jobfinder/channels.json</code>.
+                They are used only to authenticate your own requests to LinkedIn and are
+                <strong>never shared</strong> with anyone. Treat that file like a password:
+                deleting the channel removes them from disk.
+            </p>
+
+            <h2>5. Your rights</h2>
+            <p>
+                Because every record is local, you have full control at all times:
+                <strong>access</strong> any file in <code>~/.jobfinder/</code> with a text editor,
+                <strong>correct</strong> data through the app or the files themselves, and
+                <strong>delete</strong> any record — or the whole installation — by removing the folder.
+            </p>
+
+            <h2>6. Security</h2>
+            <ul>
+                <li>API keys and tokens are stored only on your disk and are sent only to the service they belong to (never to the developer).</li>
+                <li>The app redacts secrets in its own logs and in every API response shown in the UI.</li>
+                <li>You are responsible for the security of your machine, your LinkedIn account and the rate limits you configure.</li>
+            </ul>
+
+            <h2>7. Children</h2>
+            <p>JobFinder is not intended for children under 18 and does not knowingly collect data from minors.</p>
+
+            <h2>8. Changes to this policy</h2>
+            <p>
+                This policy may be updated as the app evolves. The date at the top of the page
+                identifies the current version.
+            </p>
+
+            <div class="links">
+                <a href="index.html">🏠 Back to Legal Home</a> |
+                <a href="terms.html">📜 Terms of Use</a>
+            </div>
+
+            <div class="contact">
+                <strong>📧 Developer:</strong> Dan Hachuel<br>
+                <strong>📩 Contact:</strong> <a href="mailto:danchannels96@gmail.com">danchannels96@gmail.com</a>
+            </div>
+        </main>
+        <footer>
+            <p>© 2026 JobFinder (DanHachuel) · Local-first · No data leaves your machine except the actions you explicitly trigger.</p>
+        </footer>
+    </div>
+</body>
+</html>

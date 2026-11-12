@@ -9,6 +9,8 @@ import { Router } from 'express';
 import { healthRoutes } from './health.mjs';
 import { configRoutes } from './config.mjs';
 import { channelsRoutes } from './channels.mjs';
+import { topicsRoutes } from './topics.mjs';
+import { postsRoutes } from './posts.mjs';
 
 export function createApiRouter(ctx) {
   const router = Router();
@@ -16,6 +18,8 @@ export function createApiRouter(ctx) {
   router.use(healthRoutes(ctx));
   router.use(configRoutes(ctx));
   router.use(channelsRoutes(ctx));
+  router.use(topicsRoutes(ctx));
+  router.use(postsRoutes(ctx));
 
   return router;
 }

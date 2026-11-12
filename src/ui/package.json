@@ -1,7 +1,7 @@
 {
   "name": "jobfinder-ui",
   "private": true,
-  "version": "0.1.00",
+  "version": "0.1.01",
   "type": "module",
   "scripts": {
     "dev": "vite",

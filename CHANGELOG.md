@@ -6,6 +6,14 @@ All notable changes to JobFinder are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.01] — 2026-11-12
+
+### Fixed
+
+- **Porta padrão `3030` → `4040`**: `config.json` (default + `officialRedirectUri`), fallback do servidor e do launcher, proxy do Vite em dev, textos de ajuda e documentação.
+- **`jsonStore` tolerante a BOM**: arquivos JSON editados por ferramentas externas (ex.: `Set-Content` do PowerShell grava BOM) não são mais tratados como corrompidos — o store remove o BOM antes do parse.
+- **Compatibilidade publicada no npm**: `@danhachuel/jobfinder@0.1.0` (visual `0.1.00`) publicada via workflow (`latest` + `next`), instalável via `npx`.
+
 ## [0.1.00] — 2026-11-12
 
 First functional release of JobFinder (deliverables of PRD §12):

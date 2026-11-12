@@ -39,7 +39,10 @@ export class JsonStore {
       return fallback;
     }
     try {
-      const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+      // Some editors (e.g. Windows PowerShell Set-Content) write a BOM —
+      // strip it before parsing so external edits never look "corrupt".
+      const raw = fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '');
+      const data = JSON.parse(raw);
       this.cache.set(name, data);
       return data;
     } catch (err) {

@@ -19,6 +19,11 @@ First functional release of JobFinder (deliverables of PRD §12):
 - Pasta `legal/` completa em inglês
 - `README.md` com instalação/uso e `CHANGELOG.md` histórico
 
+### Fixed
+
+- `.gitignore`: o padrão amplo `storage/` escondia `src/server/storage/` do commit (quebrava o `npm ci` do CI e o pacote npx). Agora ancorado na raiz: `/storage/` e `/.jobfinder/`.
+- `package-lock.json` (raiz e `src/ui`) sincronizados com o bump `0.1.00` ( exigência do `npm ci` no CI).
+
 ## [0.0.01] — 2026-11-12
 
 ### Added

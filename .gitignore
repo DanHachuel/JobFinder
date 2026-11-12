@@ -5,6 +5,7 @@ node_modules/
 dist/
 src/ui/dist/
 *.tsbuildinfo
+*.tgz
 
 # local runtime storage (NEVER commit — lives in ~/.jobfinder or ./storage in dev)
 storage/

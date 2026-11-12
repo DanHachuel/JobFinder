@@ -67,7 +67,7 @@ function SubItem({ to, children }) {
   );
 }
 
-export default function Sidebar({ officialApiConfigured }) {
+export default function Sidebar({ officialApiConfigured, version }) {
   return (
     <aside className="flex h-screen w-64 shrink-0 flex-col bg-[#1e1b4b] text-white">
       {/* Logo */}
@@ -145,7 +145,7 @@ export default function Sidebar({ officialApiConfigured }) {
           rel="noreferrer noopener"
           className="flex items-center justify-center gap-2 rounded-lg bg-white/5 px-4 py-2.5 text-xs text-gray-300 transition hover:bg-white/10"
         >
-          v0.0.01 · 100% local
+          v{version ?? '0.1.00'} · 100% local
         </a>
       </div>
     </aside>

@@ -6,6 +6,19 @@ All notable changes to JobFinder are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.00] — 2026-11-12
+
+First functional release of JobFinder (deliverables of PRD §12):
+
+- App installable via `npx @danhachuel/jobfinder` with a local React+Vite+Tailwind UI at `localhost:3030`
+- Módulo 1 (Postagens): manual + agendada + geração por LLM (OpenAI, Anthropic, DeepSeek, Ollama local)
+- Módulo 2 (Conexões & DMs): convites com variáveis, limite semanal de 100, cascatas com até 5 mensagens/dia
+- Módulo 3 (Vagas): match semântico currículo↔vaga, busca com score, Easy Apply em dry-run (Playwright opcional para live)
+- Armazenamento 100% local em JSON (`~/.jobfinder/`) — nenhum banco externo, nenhum servidor do JobFinder
+- Workflow `publish-npm.yml` ativo (smoke tests + dist-tag `next` → `latest`)
+- Pasta `legal/` completa em inglês
+- `README.md` com instalação/uso e `CHANGELOG.md` histórico
+
 ## [0.0.01] — 2026-11-12
 
 ### Added

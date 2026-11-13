@@ -3,7 +3,7 @@
  * identidade JobFinder — sidebar #1e1b4b, acento indigo #818cf8).
  *
  * Split screen: painel de marca à esquerda (orbs + partículas, passos do
- * fluxo) e formulário à direita. Autenticação 100% local contra
+ * fluxo) e formulário à direita. Autenticação contra
  * ~/.jobfinder/auth.json (senha com hash scrypt no backend).
  */
 import React, { useCallback, useEffect, useState } from 'react';
@@ -109,9 +109,6 @@ export default function LoginPage() {
         <div className="relative z-10 flex h-full w-full flex-col justify-center px-16">
           <h1 className="text-2xl font-bold tracking-tight text-white">
             Job<span className="text-[#818cf8]">Finder</span>
-            <span className="ml-3 rounded border border-indigo-400/30 bg-indigo-500/10 px-2 py-0.5 text-[10px] font-medium align-middle text-indigo-300">
-              100% local
-            </span>
           </h1>
 
           <h2 className="mt-10 max-w-xl text-4xl font-bold leading-tight text-white">
@@ -119,7 +116,7 @@ export default function LoginPage() {
             um só lugar
           </h2>
           <p className="mt-4 max-w-md text-lg text-white/50">
-            Menos trabalho manual, mais candidaturas certas — seus dados nunca saem desta máquina.
+            Menos trabalho manual, mais candidaturas certas — em um só lugar.
           </p>
 
           <div className="mt-12 grid max-w-2xl grid-cols-4 gap-6">
@@ -140,15 +137,15 @@ export default function LoginPage() {
       {/* Form panel */}
       <div className="flex w-full flex-col justify-between overflow-y-auto bg-gray-50 p-8 lg:w-1/2">
         <div className="flex justify-end">
-          <span className="badge bg-indigo-100 text-indigo-700" title="Aplicativo local — nenhum dado sai desta máquina">
+          <span className="badge bg-indigo-100 text-indigo-700" title="JobFinder — automação inteligente para LinkedIn">
             <Sparkles className="mr-1 h-3 w-3" />
-            execução local
+            automação inteligente
           </span>
         </div>
 
         <div className="mx-auto w-full max-w-sm">
           <h2 className="text-2xl font-bold text-gray-800">Bem-vindo de volta!</h2>
-          <p className="mt-2 text-sm text-gray-500">Acesso local ao JobFinder — informe seu e-mail e senha.</p>
+          <p className="mt-2 text-sm text-gray-500">Acesso ao JobFinder — informe seu e-mail e senha.</p>
 
           {error && (
             <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
@@ -212,7 +209,7 @@ export default function LoginPage() {
 
           {hint && (
             <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-              <p className="font-semibold">Primeiro acesso (usuário local pré-criado)</p>
+              <p className="font-semibold">Primeiro acesso (usuário pré-criado)</p>
               <p className="mt-1">
                 E-mail <code className="font-mono font-semibold">{hint.email}</code> · senha{' '}
                 <code className="font-mono font-semibold">123456</code>

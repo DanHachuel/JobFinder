@@ -139,7 +139,7 @@ export default function Candidaturas() {
             <p className="mt-3 text-xs text-gray-500">
               A automação usa Playwright (opcional). Sem ele instalado — ou com dry-run ativo — o app registra a candidatura como
               <strong> dry-run</strong> e nada é enviado. Formulários complexos retornam <strong>intervenção manual</strong> com
-              screenshot salvo localmente.
+              screenshot salvo no servidor.
             </p>
             <p className="mt-3 text-xs text-gray-400">Instalar sob demanda: npm i -g playwright &amp;&amp; npx playwright install chromium</p>
           </div>

@@ -30,7 +30,6 @@ export const DEFAULT_CONFIG = {
   schemaVersion: 1,
   port: 4040,
   host: '127.0.0.1',
-  openBrowserOnStart: true,
   dryRun: true,
   llm: {
     provider: 'ollama',

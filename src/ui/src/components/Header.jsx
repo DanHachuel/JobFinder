@@ -51,7 +51,7 @@ export default function Header({ title, dryRun, connected, mode }) {
         </a>
         <div
           className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-600"
-          title={`${user?.email ?? 'conta local'} — sessão local (jobfinder_session)`}
+          title={`${user?.email ?? 'conta'} — sessão autenticada`}
         >
           {initialsFrom(user?.email)}
         </div>

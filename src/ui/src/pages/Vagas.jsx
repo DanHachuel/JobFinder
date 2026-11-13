@@ -112,7 +112,7 @@ export default function Vagas() {
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
         <MetricCard label="Currículo" value={resume?.skills?.length ? `${resume.skills.length} skills` : 'Não enviado'} hint={resume?.fileName ?? 'PDF, DOCX ou TXT'} />
-        <MetricCard label="Vagas salvas" value={saved.total} hint="match calculado localmente" />
+        <MetricCard label="Vagas salvas" value={saved.total} hint="match semântico" />
         <MetricCard label="Match médio" value={stats?.averageScore ?? '—'} hint="currículo × vagas salvas" />
         <MetricCard label="Resultados na busca" value={results.length} hint="score semântico 0–100" />
       </div>
@@ -121,7 +121,7 @@ export default function Vagas() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="card">
           <h3 className="text-base font-semibold text-gray-800">Currículo</h3>
-          <p className="mt-1 text-xs text-gray-500">Processamento 100% local (PDF via pdfjs, DOCX via mammoth).</p>
+          <p className="mt-1 text-xs text-gray-500">Processamento automático (PDF via pdfjs, DOCX via mammoth).</p>
           <input ref={fileInput} type="file" accept=".pdf,.docx,.txt,application/pdf,text/plain" className="mt-4 hidden" onChange={(event) => upload(event.target.files?.[0])} />
           <button className="btn-primary mt-2" onClick={() => fileInput.current?.click()} disabled={uploading}>
             <Upload className="h-4 w-4" />

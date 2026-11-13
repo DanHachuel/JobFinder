@@ -6,6 +6,17 @@ All notable changes to JobFinder are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.05] — 2026-11-13
+
+### Changed
+
+- **Nenhuma abertura automática de navegador**: o launcher (`scripts/cli.mjs`) não abre mais o navegador do sistema ao iniciar. O terminal apenas imprime a URL (`http://127.0.0.1:4040`) e a mensagem `Press Ctrl+C to stop.`, aguardando a ação do usuário — abrir uma janela sem ser pedido não é aceitável para um produto hospedado (SaaS). A função `openBrowser` foi removida, as flags `--open`/`--no-open` viraram no-ops (ainda aceitas por compatibilidade) e a chave `openBrowserOnStart` saiu do config padrão.
+- **Marca reposicionada para SaaS**: removidas todas as menções a "100% local" / "local-first" / "seus dados nunca saem desta máquina" da UI (badge do login, rodapé da sidebar — que fica apenas com o perfil e o botão **Sair** —, rodapé do conteúdo, cartões de Vagas, Candidaturas e Header) e do CLI (subtítulo do banner agora é "LinkedIn Automation • Intelligent Workflows"). A descrição do pacote npm e o README seguem o mesmo reposicionamento.
+
+### Removed
+
+- Bloco "100% local" (link para o GitHub) do rodapé da sidebar e badge "100% local" da tela de login; frases de posicionamento exclusivamente local em toda a interface.
+
 ## [0.1.04] — 2026-11-12
 
 ### Added

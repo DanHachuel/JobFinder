@@ -1,6 +1,6 @@
 # JobFinder
 
-**Local-first LinkedIn automation.** Single user, no cloud account, no external database — everything runs on your machine and is stored in JSON.
+**LinkedIn automation platform.** Posts, connections/DMs and job applications — intelligent workflows in one place.
 
 [![npm](https://img.shields.io/badge/npm-@danhachuel%2Fjobfinder-indigo)](https://www.npmjs.com/package/@danhachuel/jobfinder)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -126,7 +126,7 @@ Releases happen **exclusively via GitHub Actions** (`.github/workflows/publish-n
 
 - [Legal index](legal/index.html) · [Privacy Policy](legal/privacy.html) · [Terms of Use](legal/terms.html)
 
-Key points: 100% local storage, no data sent to any JobFinder server, cookies never shared, you are responsible for respecting LinkedIn's rate limits and for every action taken on your account.
+Key points: your data stays in your own JSON store, no data is sent to any JobFinder server, cookies are never shared, you are responsible for respecting LinkedIn's rate limits and for every action taken on your account.
 
 ## License
 

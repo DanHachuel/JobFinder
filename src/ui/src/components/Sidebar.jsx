@@ -163,36 +163,26 @@ export default function Sidebar({ officialApiConfigured }) {
         </ul>
       </nav>
 
-      {/* Footer: local account + logout (session lives in an HTTP-only cookie) */}
+      {/* Footer: account + logout (session lives in an HTTP-only cookie) */}
       <div className="mt-auto border-t border-white/10 p-4">
         <div className="mb-3 flex items-center gap-3 rounded-lg bg-white/5 px-3 py-2.5">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 text-xs font-bold text-indigo-200">
             {initialsFrom(user?.email)}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-semibold text-white">{user?.name ?? 'Conta local'}</p>
+            <p className="truncate text-xs font-semibold text-white">{user?.name ?? 'Conta'}</p>
             <p className="truncate text-[10px] text-gray-400">{user?.email ?? '—'}</p>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <a
-            href="https://github.com/DanHachuel/JobFinder"
-            target="_blank"
-            rel="noreferrer noopener"
-            className="flex items-center justify-center gap-2 rounded-lg bg-white/5 px-4 py-2.5 text-xs text-gray-300 transition hover:bg-white/10"
-          >
-            100% local
-          </a>
-          <button
-            type="button"
-            onClick={signOut}
-            className="flex items-center justify-center gap-2 rounded-lg bg-white/5 px-4 py-2.5 text-xs text-gray-300 transition hover:bg-red-500/20 hover:text-red-200"
-            title="Encerrar a sessão local"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            Sair
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={signOut}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-white/5 px-4 py-2.5 text-xs text-gray-300 transition hover:bg-red-500/20 hover:text-red-200"
+          title="Encerrar a sessão"
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          Sair
+        </button>
       </div>
     </aside>
   );

@@ -215,7 +215,7 @@ export default function ConfigPage() {
           <h3 className="text-base font-semibold text-gray-800">Segurança</h3>
         </div>
         <p className="mt-1 text-xs text-gray-500">
-          Conta local única: <span className="font-medium text-gray-700">{user?.email}</span> · a senha fica apenas em{' '}
+          Conta única: <span className="font-medium text-gray-700">{user?.email}</span> · a senha fica apenas em{' '}
           <code className="font-mono">~/.jobfinder/auth.json</code>, com hash scrypt (nunca em texto puro).
         </p>
         <form className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3" onSubmit={changePassword}>

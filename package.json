@@ -1,12 +1,12 @@
 {
   "name": "@danhachuel/jobfinder",
-  "version": "0.1.04",
-  "description": "JobFinder — local-first LinkedIn automation (posts, connections/DMs, job matching) with a React + Vite UI. Single-user, JSON storage, no external database.",
+  "version": "0.1.05",
+  "description": "JobFinder — LinkedIn automation platform (posts, connections/DMs, job matching) with a React + Vite UI. Intelligent workflows, JSON storage.",
   "keywords": [
     "linkedin",
     "automation",
     "jobs",
-    "local-first",
+    "saas",
     "cli",
     "npx"
   ],

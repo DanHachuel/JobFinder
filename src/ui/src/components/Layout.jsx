@@ -65,8 +65,8 @@ export default function Layout({ children }) {
           <div key={location.pathname} className="flex-1 overflow-y-auto overflow-x-hidden p-8">
             {children}
             <footer className="mt-8 flex items-center justify-between border-t border-gray-200 pt-4 text-xs text-gray-400">
-              <span>© 2026 JobFinder (DanHachuel) · execução 100% local</span>
-              <span>Armazenamento em JSON · nenhum dado sai desta máquina</span>
+              <span>© 2026 JobFinder (DanHachuel)</span>
+              <span>Armazenamento em JSON</span>
             </footer>
           </div>
         </main>

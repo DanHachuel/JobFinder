@@ -71,10 +71,10 @@ function normalizeNpmVersion(v) {
 }
 
 const USAGE = `
-JobFinder — local-first LinkedIn automation
+JobFinder — LinkedIn automation platform
 
 Usage:
-  jobfinder install           Create the local JSON data store (~/.jobfinder/)
+  jobfinder install           Create the JSON data store (~/.jobfinder/)
   jobfinder [start] [flags]   Start the app at http://localhost:4040
   jobfinder --version         Show version
   jobfinder --help            Show this help
@@ -83,8 +83,6 @@ Flags:
   --port <n>         Port to listen on (default 4040)
   --host <addr>      Bind address (default 127.0.0.1)
   --data-dir <path>  Data directory (default ~/.jobfinder, override with JOBFINDER_HOME)
-  --open             Open the browser after start (default)
-  --no-open          Do not open the browser after start
   --dry-run          Run with automations in dry-run mode (no real LinkedIn actions)
 
 Install commands (canonical npm version):
@@ -93,7 +91,7 @@ Install commands (canonical npm version):
 `;
 
 function parseArgs(argv) {
-  const args = { command: null, port: null, host: null, dataDir: null, open: null, dryRun: false };
+  const args = { command: null, port: null, host: null, dataDir: null, dryRun: false };
   const rest = [...argv];
   const first = rest[0];
   if (first && !first.startsWith('-')) {
@@ -115,11 +113,10 @@ function parseArgs(argv) {
         args.dataDir = rest[i + 1];
         i += 1;
         break;
+      // Deprecated no-ops: the browser is never opened automatically.
+      // The flags are still accepted so existing commands keep working.
       case '--open':
-        args.open = true;
-        break;
       case '--no-open':
-        args.open = false;
         break;
       case '--dry-run':
         args.dryRun = true;
@@ -146,7 +143,7 @@ function printBanner() {
   const line = '-'.repeat(58);
   console.log(line);
   console.log(` JobFinder v${VISUAL_VERSION}  (npm: ${NPM_VERSION})`);
-  console.log(' Local-first LinkedIn automation • JSON storage • single user');
+  console.log(' LinkedIn Automation • Intelligent Workflows');
   console.log(line);
 }
 
@@ -171,7 +168,7 @@ function commandInstall({ dataDir }) {
   console.log(`  3. Start the app:  npx --yes @danhachuel/jobfinder@${NPM_VERSION}`);
 }
 
-async function commandStart({ port, host, dataDir, open, dryRun }) {
+async function commandStart({ port, host, dataDir, dryRun }) {
   const resolved = resolveDataDir(dataDir);
   ensureDataDir(resolved);
 
@@ -227,10 +224,9 @@ async function commandStart({ port, host, dataDir, open, dryRun }) {
   // Windows-only (Ctrl+Break) — harmless no-op on other platforms.
   process.on('SIGBREAK', forward('SIGBREAK'));
 
-  const shouldOpen = open === null ? !process.env.CI && process.env.JOBFINDER_NO_OPEN !== '1' : open;
-  if (shouldOpen) {
-    setTimeout(() => openBrowser(url), 1200);
-  }
+  // No auto-open: the terminal prints the URL and waits for the user.
+  // Opening a browser window on the user's machine without being asked
+  // is not acceptable for a hosted (SaaS) product.
 
   child.on('exit', (code, signal) => {
     // Loud, visible reason: the server ending must never look like a silent
@@ -239,21 +235,6 @@ async function commandStart({ port, host, dataDir, open, dryRun }) {
     console.error(`\n[jobfinder] server exited (${reason}).`);
     process.exit(code ?? (signal ? 1 : 0));
   });
-}
-
-function openBrowser(url) {
-  const cmd = process.platform === 'win32' ? 'cmd' : process.platform === 'darwin' ? 'open' : 'xdg-open';
-  const args =
-    process.platform === 'win32' ? ['/c', 'start', '', url] : [url];
-  try {
-    // Best-effort: an 'error' event (e.g. no shell/browser available) must
-    // never take the launcher down.
-    const opened = spawn(cmd, args, { stdio: 'ignore', detached: true });
-    opened.on('error', () => {});
-    opened.unref();
-  } catch {
-    /* opening the browser is best-effort */
-  }
 }
 
 function commandVersion() {

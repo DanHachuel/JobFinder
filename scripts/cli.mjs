@@ -25,6 +25,34 @@ import { fileURLToPath } from 'node:url';
 
 import { ensureDataDir, resolveDataDir, isDataDirHealthy } from '../src/server/storage/bootstrap.mjs';
 
+/**
+ * Process resilience for the launcher — installed before anything else runs
+ * so the CLI can never vanish silently (terminal back at the prompt with no
+ * explanation):
+ *
+ *  1. unhandledRejection — since Node 15 any unhandled promise rejection
+ *     terminates the process immediately. Log it and keep supervising the
+ *     server child instead of dying without a trace.
+ *  2. EPIPE on stdio — when the shell behind stdout disappears (Windows
+ *     terminals, MobaXterm, redirection), the next console.log throws an
+ *     unhandled 'error' and kills the launcher.
+ *  3. uncaughtException — log loudly and exit with a visible reason.
+ */
+process.on('unhandledRejection', (reason) => {
+  const message = reason instanceof Error ? reason.message : String(reason);
+  console.error(`[jobfinder] unhandled promise rejection ignored: ${message}`);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[jobfinder] uncaught exception:', err);
+  process.exit(1);
+});
+for (const stream of [process.stdout, process.stderr]) {
+  stream?.on?.('error', (err) => {
+    if (err?.code === 'EPIPE') return;
+    console.error(`[jobfinder] stdio error: ${err?.code ?? ''} ${err?.message ?? err}`);
+  });
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const SERVER_ENTRY = path.join(ROOT, 'src', 'server', 'index.mjs');
@@ -176,11 +204,28 @@ async function commandStart({ port, host, dataDir, open, dryRun }) {
   console.log(' Press Ctrl+C to stop.\n');
 
   const child = spawn(process.execPath, [SERVER_ENTRY], { stdio: 'inherit', env, cwd: ROOT });
+
+  // The `child` handle keeps this launcher's event loop open for as long as
+  // the server runs: the CLI stays in the foreground and the terminal only
+  // returns to the prompt when the server itself exits (or on Ctrl+C).
+  let stopping = false;
   const forward = (signal) => () => {
+    // A second Ctrl+C must never be ignored: force the exit if the graceful
+    // path is stuck.
+    if (stopping) {
+      process.exit(1);
+    }
+    stopping = true;
+    if (child.exitCode !== null || child.signalCode !== null) {
+      process.exit(child.exitCode ?? (child.signalCode ? 1 : 0));
+      return;
+    }
     child.kill(signal);
   };
   process.on('SIGINT', forward('SIGINT'));
   process.on('SIGTERM', forward('SIGTERM'));
+  // Windows-only (Ctrl+Break) — harmless no-op on other platforms.
+  process.on('SIGBREAK', forward('SIGBREAK'));
 
   const shouldOpen = open === null ? !process.env.CI && process.env.JOBFINDER_NO_OPEN !== '1' : open;
   if (shouldOpen) {
@@ -188,6 +233,10 @@ async function commandStart({ port, host, dataDir, open, dryRun }) {
   }
 
   child.on('exit', (code, signal) => {
+    // Loud, visible reason: the server ending must never look like a silent
+    // crash back at the prompt.
+    const reason = signal ? `signal ${signal}` : `code ${code}`;
+    console.error(`\n[jobfinder] server exited (${reason}).`);
     process.exit(code ?? (signal ? 1 : 0));
   });
 }
@@ -197,7 +246,11 @@ function openBrowser(url) {
   const args =
     process.platform === 'win32' ? ['/c', 'start', '', url] : [url];
   try {
-    spawn(cmd, args, { stdio: 'ignore', detached: true }).unref();
+    // Best-effort: an 'error' event (e.g. no shell/browser available) must
+    // never take the launcher down.
+    const opened = spawn(cmd, args, { stdio: 'ignore', detached: true });
+    opened.on('error', () => {});
+    opened.unref();
   } catch {
     /* opening the browser is best-effort */
   }

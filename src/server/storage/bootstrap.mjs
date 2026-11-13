@@ -9,10 +9,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { resolveDataDir as resolveDataDirPath } from '../paths.mjs';
+import { defaultAuthPayload } from './authStore.mjs';
 
 /** Files created on first run, in creation order. */
 export const DATA_FILES = [
   'config.json',
+  'auth.json',
   'channels.json',
   'topics.json',
   'posts.json',
@@ -112,6 +114,8 @@ function initialPayload(file) {
   switch (file) {
     case 'config.json':
       return DEFAULT_CONFIG;
+    case 'auth.json':
+      return defaultAuthPayload();
     case 'topics.json':
       return SEED_TOPICS.map((t) => ({ ...t, createdAt: new Date().toISOString() }));
     case 'resume.json':

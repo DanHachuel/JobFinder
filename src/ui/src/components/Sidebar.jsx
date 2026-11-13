@@ -5,7 +5,7 @@
  * and the persistent "Criar API Oficial do LinkedIn" button.
  */
 import React, { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -18,7 +18,10 @@ import {
   ExternalLink,
   ChevronDown,
   KeyRound,
+  LogOut,
 } from 'lucide-react';
+
+import { initialsFrom, useAuth } from '../lib/auth.jsx';
 
 const LINKEDIN_API_URL =
   'https://www.linkedin.com/help/linkedin/answer/a526048/acesso-as-apis-do-linkedin?lang=pt';
@@ -77,6 +80,14 @@ function SubItem({ to, children }) {
 }
 
 export default function Sidebar({ officialApiConfigured }) {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const signOut = async () => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col bg-[#1e1b4b] text-white">
       {/* Logo + version badge (version injected at build time from the root package.json) */}
@@ -141,7 +152,7 @@ export default function Sidebar({ officialApiConfigured }) {
               </span>
             )}
           </li>
-          <Item to="/config" icon={Settings}>
+          <Item to="/configuracoes" icon={Settings}>
             Configurações
           </Item>
 
@@ -152,16 +163,36 @@ export default function Sidebar({ officialApiConfigured }) {
         </ul>
       </nav>
 
-      {/* Footer: local-first badge (version lives in the logo badge) */}
+      {/* Footer: local account + logout (session lives in an HTTP-only cookie) */}
       <div className="mt-auto border-t border-white/10 p-4">
-        <a
-          href="https://github.com/DanHachuel/JobFinder"
-          target="_blank"
-          rel="noreferrer noopener"
-          className="flex items-center justify-center gap-2 rounded-lg bg-white/5 px-4 py-2.5 text-xs text-gray-300 transition hover:bg-white/10"
-        >
-          100% local
-        </a>
+        <div className="mb-3 flex items-center gap-3 rounded-lg bg-white/5 px-3 py-2.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 text-xs font-bold text-indigo-200">
+            {initialsFrom(user?.email)}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-semibold text-white">{user?.name ?? 'Conta local'}</p>
+            <p className="truncate text-[10px] text-gray-400">{user?.email ?? '—'}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <a
+            href="https://github.com/DanHachuel/JobFinder"
+            target="_blank"
+            rel="noreferrer noopener"
+            className="flex items-center justify-center gap-2 rounded-lg bg-white/5 px-4 py-2.5 text-xs text-gray-300 transition hover:bg-white/10"
+          >
+            100% local
+          </a>
+          <button
+            type="button"
+            onClick={signOut}
+            className="flex items-center justify-center gap-2 rounded-lg bg-white/5 px-4 py-2.5 text-xs text-gray-300 transition hover:bg-red-500/20 hover:text-red-200"
+            title="Encerrar a sessão local"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Sair
+          </button>
+        </div>
       </div>
     </aside>
   );

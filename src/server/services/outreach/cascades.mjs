@@ -12,7 +12,7 @@
  */
 import { HttpError } from '../../middleware/errors.mjs';
 import { countToday } from '../../middleware/rateLimiter.mjs';
-import { createLinkedInClient } from '../linkedin/index.mjs';
+import { requireLiveLinkedInClient } from '../linkedin/index.mjs';
 
 export const MAX_STEPS = 5; // hard limit from the PRD (dmsPorDia)
 
@@ -122,7 +122,21 @@ export async function cascadeTick(ctx, now = new Date()) {
   const cascades = store.list('dm-cascades.json').filter((c) => c.status === 'active');
   if (!cascades.length) return { processed: 0, sent: 0, skipped: 0, results: [] };
 
-  const { client } = createLinkedInClient({ store, logger, config, rateLimiter });
+  // DMs are real actions: with dry-run OFF a channel is mandatory. When the
+  // channel is missing the whole tick is skipped (visible in the UI stats)
+  // instead of simulating a message that was never delivered.
+  let client;
+  try {
+    ({ client } = requireLiveLinkedInClient({ store, logger, config, rateLimiter }));
+  } catch (err) {
+    logger.warn('cascades', 'tick skipped', { message: err.message });
+    return {
+      processed: cascades.length,
+      sent: 0,
+      skipped: cascades.length,
+      results: [{ status: 'skipped', reason: err.message }],
+    };
+  }
   const daily = dailyDmState(store, config);
   const intervalMs = (config?.limits?.dmIntervalMinutes ?? 30) * 60 * 1000;
   let lastSentAt = lastGlobalSend(store);

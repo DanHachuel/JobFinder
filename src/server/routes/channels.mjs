@@ -15,6 +15,7 @@ import express, { Router } from 'express';
 
 import { asyncRoute, badRequest, notFound, conflict } from '../middleware/errors.mjs';
 import { newId } from '../storage/jsonStore.mjs';
+import { syncLiveConfig } from '../storage/configSync.mjs';
 import { parseCookiesText, looksLikeLinkedinSession } from '../services/linkedin/cookies.mjs';
 import { LinkedInOfficialClient } from '../services/linkedin/officialApi.mjs';
 import { VoyagerClient } from '../services/linkedin/voyagerClient.mjs';
@@ -103,6 +104,7 @@ export function channelsRoutes({ store, logger, config, rateLimiter }) {
         ...current,
         linkedin: { ...current.linkedin, authMode: 'official', officialClientId: clientId, officialClientSecret: clientSecret },
       }));
+      syncLiveConfig(store, config);
       logger.info('linkedin:official', 'channel registered', { id });
       res.status(201).json({ channel: redactChannel(store.find('channels.json', id)) });
     })

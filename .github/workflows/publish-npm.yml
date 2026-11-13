@@ -67,6 +67,7 @@ jobs:
           TEST_ROOT="${RUNNER_TEMP}/jobfinder-install-smoke"
           JOBFINDER_HOME="$TEST_ROOT" node scripts/cli.mjs install
           test -f "$TEST_ROOT/config.json"
+          test -f "$TEST_ROOT/auth.json"
           test -f "$TEST_ROOT/channels.json"
           test -f "$TEST_ROOT/topics.json"
           test -f "$TEST_ROOT/posts.json"
@@ -84,6 +85,10 @@ jobs:
           SERVER_PID=$!
           sleep 3
           curl --fail --silent http://127.0.0.1:3399/api/health
+          # local auth: the pre-created user must be able to log in
+          curl --fail --silent -X POST -H 'Content-Type: application/json' \
+            -d '{"email":"dan.hachuel@gmail.com","password":"123456"}' \
+            http://127.0.0.1:3399/api/auth/login
           kill $SERVER_PID || true
 
       - name: Publish to npm

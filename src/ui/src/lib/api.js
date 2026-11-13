@@ -38,6 +38,11 @@ async function request(method, path, { body, raw, query, headers } = {}) {
   const contentType = res.headers.get('content-type') ?? '';
   const data = contentType.includes('application/json') ? await res.json().catch(() => null) : await res.text().catch(() => null);
 
+  if (res.status === 401 && data?.error?.code === 'unauthorized') {
+    // Session expired/revoked: drop the auth state so the app redirects to /login.
+    window.dispatchEvent(new Event('jobfinder:unauthorized'));
+  }
+
   if (!res.ok) {
     const message = data?.error?.message ?? (typeof data === 'string' ? data : res.statusText);
     const err = new ApiError(message || `HTTP ${res.status}`, res.status, data?.error ?? data);

@@ -7,7 +7,7 @@
  * the simulation flag for dry-run.
  */
 import { sanitizePostText, LINKEDIN_POST_LIMIT } from './generator.mjs';
-import { createLinkedInClient } from '../linkedin/index.mjs';
+import { requireLiveLinkedInClient } from '../linkedin/index.mjs';
 
 /** Validate a draft before publishing. Throws HttpError on problems. */
 export function assertPublishable(post) {
@@ -46,9 +46,12 @@ export async function publishPost(ctx, postId) {
 
   await store.patch('posts.json', postId, { status: 'publishing', error: null, updatedAt: new Date().toISOString() });
 
-  const { client, mode } = createLinkedInClient({ store, logger, config, rateLimiter });
+  let mode = 'dry-run';
   try {
-    const result = await client.createPost({ text });
+    // Publishing is a real action: with dry-run OFF a channel is mandatory.
+    const live = requireLiveLinkedInClient({ store, logger, config, rateLimiter });
+    mode = live.mode;
+    const result = await live.client.createPost({ text });
     const updated = await store.patch('posts.json', postId, {
       status: 'published',
       publishedAt: new Date().toISOString(),

@@ -8,6 +8,7 @@
 import { JsonStore } from './storage/jsonStore.mjs';
 import { Logger } from './storage/logger.mjs';
 import { RateLimiter } from './middleware/rateLimiter.mjs';
+import { AuthStore } from './storage/authStore.mjs';
 import { ensureDataDir } from './storage/bootstrap.mjs';
 
 export function createContext(dataDir) {
@@ -16,5 +17,7 @@ export function createContext(dataDir) {
   const logger = new Logger(dataDir);
   const config = store.read('config.json', {});
   const rateLimiter = new RateLimiter({ config, logger });
-  return { dataDir, store, logger, config, rateLimiter };
+  const auth = new AuthStore(store);
+  auth.ensure();
+  return { dataDir, store, logger, config, rateLimiter, auth };
 }

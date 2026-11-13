@@ -7,6 +7,7 @@
 import { Router } from 'express';
 
 import { asyncRoute, badRequest } from '../middleware/errors.mjs';
+import { syncLiveConfig } from '../storage/configSync.mjs';
 
 /** Hide secrets before sending anything to the browser. */
 function redactConfig(config) {
@@ -24,7 +25,7 @@ function redactConfig(config) {
   };
 }
 
-export function configRoutes({ store, logger, rateLimiter }) {
+export function configRoutes({ store, logger, rateLimiter, config }) {
   const router = Router();
 
   router.get(
@@ -65,12 +66,23 @@ export function configRoutes({ store, logger, rateLimiter }) {
           throw badRequest(`linkedin.authMode must be one of ${allowed.join(', ')}`);
         }
       }
+      if (patch.dryRun !== undefined && typeof patch.dryRun !== 'boolean') {
+        throw badRequest('dryRun must be a boolean');
+      }
 
+      const disablingDryRun = patch.dryRun === false;
       await store.update('config.json', (current) => ({ ...current, ...deepMerge(current, patch) }));
-      const updated = store.read('config.json', {});
+      const updated = syncLiveConfig(store, config);
       rateLimiter.setConfig(updated);
-      req.app.locals.config = updated;
-      logger.info('config', 'configuration updated', { keys: Object.keys(patch) });
+      req.app.locals.config = config;
+      if (disablingDryRun) {
+        logger.warn(
+          'config',
+          'DRY-RUN DISABLED — real LinkedIn actions (posts, invitations, DMs, applications) are now allowed',
+          {}
+        );
+      }
+      logger.info('config', 'configuration updated', { keys: Object.keys(patch), dryRun: updated.dryRun });
       res.json({ config: redactConfig(updated) });
     })
   );

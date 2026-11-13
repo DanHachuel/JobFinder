@@ -29,27 +29,40 @@ Everything is driven from a React dashboard at `http://localhost:4040` — metri
 Windows / CMD / MobaXterm:
 
 ```bash
-npx.cmd --yes --prefer-online @danhachuel/jobfinder@<VERSAO> install
-npx.cmd --yes --prefer-online @danhachuel/jobfinder@<VERSAO>
+npx.cmd --yes --prefer-online @danhachuel/jobfinder@0.1.4 install
+npx.cmd --yes --prefer-online @danhachuel/jobfinder@0.1.4
 ```
 
 Normal terminal:
 
 ```bash
-npx --yes @danhachuel/jobfinder@<VERSAO> install
-npx --yes @danhachuel/jobfinder@<VERSAO>
+npx --yes @danhachuel/jobfinder@0.1.4 install
+npx --yes @danhachuel/jobfinder@0.1.4
 ```
 
-`install` creates `~/.jobfinder/` (config, channels, topics, posts, connections, dm-cascades, jobs, applications, resume, logs). It is safe to re-run: existing data is never overwritten.
+`install` creates `~/.jobfinder/` (config, auth, channels, topics, posts, connections, dm-cascades, jobs, applications, resume, logs). It is safe to re-run: existing data is never overwritten.
+
+## First login
+
+The app is protected by a local session. On the first run a single user is created:
+
+| Field | Value |
+|---|---|
+| E-mail | `dan.hachuel@gmail.com` |
+| Password | `123456` |
+
+- Without a session every screen redirects to `/login` (and the API answers `401`).
+- The password is stored hashed (scrypt) in `~/.jobfinder/auth.json` — never in plain text. Change it in **Configurações → Segurança** right after the first login.
+- **Sair** (sidebar footer) ends the session.
 
 ## Usage
 
-1. Start the app → it opens `http://localhost:4040`
+1. Start the app → it opens `http://localhost:4040` → log in with the local user above
 2. **Integrações** → connect LinkedIn:
    - **Recommended:** create your LinkedIn app ([Criar API Oficial do LinkedIn](legal/)) → paste Client ID/Secret → run the OAuth flow
    - **Fallback:** export cookies with ["Get cookies.txt LOCALLY"](https://chromewebstore.google.com/) and upload `cookies.txt`
 3. **Configurações** → choose your LLM provider and tune the rate limits (100 invites/week, 5 DMs/day, 20 applications/day by default)
-4. **Dry-run is ON by default** — explore the whole app safely; disable it in Configurações when you are ready
+4. **Dry-run is ON by default** — explore the whole app safely; disable it in **Configurações → Execução** when you are ready (the header then shows the red `Real Mode` badge)
 5. Publish posts, connect with people, run DM cascades, match and apply to jobs
 
 ### Useful flags
@@ -70,6 +83,7 @@ node scripts/cli.mjs --version             # version info
 ```
 ~/.jobfinder/
 ├── config.json          # LLM provider, LinkedIn auth, rate limits, dry-run
+├── auth.json            # local user + scrypt password hash + session secret
 ├── channels.json        # LinkedIn accounts (OAuth tokens or cookies — local only)
 ├── topics.json          # themes for automatic posts
 ├── posts.json           # drafts, scheduled, published, failed
@@ -90,6 +104,14 @@ npm install                       # root (server) deps
 npm run dev                       # API (4040) + UI dev server (5173) in parallel
 npm run build                     # builds the UI into src/ui/dist
 npm start                         # production-style start (serves the built UI)
+```
+
+Manual smoke tests (start a temporary server + Playwright for the UI):
+
+```bash
+node scripts/manual-tests/fase1-auth-dryrun.mjs        # API: login, sessão, toggle dry-run, troca de senha
+node scripts/manual-tests/fase1-dryrun-services.mjs    # API: flag dry-run aplicada a postagens/convites/DMs
+node scripts/manual-tests/fase1-ui-e2e.mjs             # UI (Playwright): login, badges, configurações, logout
 ```
 
 Layout: `scripts/cli.mjs` (launcher) · `src/server/` (Express API, JSON store, LinkedIn + LLM services, workers) · `src/ui/` (React + Vite + Tailwind v4).

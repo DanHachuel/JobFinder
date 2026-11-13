@@ -1,14 +1,16 @@
 /**
  * App shell: sidebar + header + content area (LeadMaster structure).
- * Fetches /api/health once on mount to know the app state (dry-run,
- * connection mode, version) and shares it with pages through context.
+ * Fetches /api/health + /api/linkedin/status on mount and on every route
+ * change to know the app state (dry-run, connection mode, version) and
+ * shares it with pages through context.
  */
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import Sidebar from './Sidebar.jsx';
 import Header from './Header.jsx';
 import { api } from '../lib/api.js';
+import { useAuth } from '../lib/auth.jsx';
 
 const AppStateContext = createContext(null);
 
@@ -21,6 +23,7 @@ const PAGE_TITLES = [
   ['/vagas/candidaturas', 'Candidaturas'],
   ['/vagas', 'Buscar vagas'],
   ['/integracoes', 'Integrações — LinkedIn'],
+  ['/configuracoes', 'Configurações'],
   ['/config', 'Configurações'],
 ];
 
@@ -30,36 +33,30 @@ export function useAppState() {
 
 export default function Layout({ children }) {
   const location = useLocation();
+  const { user } = useAuth();
   const [health, setHealth] = useState(null);
   const [linkedin, setLinkedin] = useState(null);
 
+  const load = useCallback(async () => {
+    try {
+      const [healthData, linkedinData] = await Promise.all([api.get('/health'), api.get('/linkedin/status')]);
+      setHealth(healthData);
+      setLinkedin(linkedinData);
+    } catch {
+      setHealth(null);
+      setLinkedin(null);
+    }
+  }, []);
+
   useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const [healthData, linkedinData] = await Promise.all([api.get('/health'), api.get('/linkedin/status')]);
-        if (!cancelled) {
-          setHealth(healthData);
-          setLinkedin(linkedinData);
-        }
-      } catch {
-        if (!cancelled) {
-          setHealth(null);
-          setLinkedin(null);
-        }
-      }
-    };
     load();
-    return () => {
-      cancelled = true;
-    };
-  }, [location.pathname]);
+  }, [load, location.pathname]);
 
   const title = PAGE_TITLES.find(([path]) => location.pathname.startsWith(path))?.[1] ?? 'Painel';
   const dryRun = linkedin?.dryRun ?? health?.dryRun ?? true;
 
   return (
-    <AppStateContext.Provider value={{ health, linkedin, refresh: () => window.location.reload() }}>
+    <AppStateContext.Provider value={{ health, linkedin, user, refresh: load }}>
       {/* Dashboard shell: fixed viewport, independent scroll per region */}
       <div className="flex h-screen w-full overflow-hidden overflow-x-hidden bg-gray-100">
         <Sidebar officialApiConfigured={Boolean(linkedin?.channel?.official?.hasAccessToken)} />

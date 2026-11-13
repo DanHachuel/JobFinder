@@ -23,6 +23,7 @@
 import { DryRunLinkedInClient } from './dryRun.mjs';
 import { VoyagerClient } from './voyagerClient.mjs';
 import { LinkedInOfficialClient } from './officialApi.mjs';
+import { HttpError } from '../../middleware/errors.mjs';
 
 /** Records of the active channel used across the app. */
 export function getActiveChannel(store) {
@@ -32,7 +33,7 @@ export function getActiveChannel(store) {
 
 export function createLinkedInClient({ store, logger, config, rateLimiter }) {
   const channel = getActiveChannel(store);
-  const dryRunEnabled = config?.dryRun !== false;
+  const dryRunEnabled = (config ?? store.read('config.json', {})).dryRun !== false;
 
   if (!channel || dryRunEnabled) {
     const simulated = new DryRunLinkedInClient(logger);
@@ -129,6 +130,26 @@ export function createLinkedInClient({ store, logger, config, rateLimiter }) {
     },
   };
   return { client: facade, mode: 'cookie', channel };
+}
+
+/**
+ * Client for actions that must NEVER be simulated when dry-run is off
+ * (publish a post, send an invitation/DM, apply to a job).
+ *
+ * Throws 503 `channel_required` when the user disabled dry-run but no
+ * LinkedIn channel is connected — instead of silently simulating a real
+ * action (which would look real in the UI without reaching LinkedIn).
+ */
+export function requireLiveLinkedInClient(ctx) {
+  const { client, mode, channel } = createLinkedInClient(ctx);
+  if (mode === 'dry-run' && ctx.config?.dryRun === false) {
+    throw new HttpError(
+      503,
+      'channel_required',
+      'Dry-run desativado, mas nenhum canal do LinkedIn está conectado. Conecte um canal em Integrações (API oficial ou cookies.txt) ou reative o dry-run em Configurações.'
+    );
+  }
+  return { client, mode, channel };
 }
 
 /** Build the channel object stored in channels.json (secrets never redacted on disk). */

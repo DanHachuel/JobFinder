@@ -6,6 +6,30 @@ All notable changes to JobFinder are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.04] — 2026-11-12
+
+### Added
+
+- **Sistema de login local (autenticação single-user)**: usuário pré-criado `dan.hachuel@gmail.com` / `123456`, com a senha gravada em `~/.jobfinder/auth.json` usando **scrypt** (salt + hash — nunca em texto puro). Sessão via token assinado (HMAC-SHA256) em **cookie HTTP-only** (`jobfinder_session`, 7 dias, `SameSite=Lax`), também aceito como `Authorization: Bearer` para testes de API. Novo arquivo `src/server/storage/authStore.mjs` + rotas `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/session`, `PUT /api/auth/password`, `GET /api/auth/defaults`.
+- **Proteção de rotas**: todo o app (exceto `/login`) exige sessão ativa — sem sessão, a UI redireciona para `/login` e a API responde `401 unauthorized`. Ficam públicos apenas `/api/auth/*`, `/api/health` (smoke test do CI) e `/api/channels/oauth/callback` (redirect do LinkedIn). Um `401` em qualquer request derruba a sessão e volta para o login.
+- **Tela de login** (`src/ui/src/pages/Login.jsx`) no padrão visual da tela de login do ProdMaker, adaptada para a identidade JobFinder (`#1e1b4b`, acento indigo): painel de marca escuro com orbs/partículas animadas e os 4 passos do fluxo (Publique com LLM → Conecte-se → DMs em cascata → Candidate-se), painel de formulário com ícones, mostrar/ocultar senha, caixa de erro e dica de primeiro acesso com as credenciais padrão (a dica desaparece quando a senha deixa de ser a padrão).
+- **Logout e conta na sidebar**: rodapé da sidebar mostra o usuário logado (avatar + e-mail) e o botão **Sair**, ao lado do selo "100% local".
+- **Seção "Execução" nas Configurações**: switch para **desativar o dry-run**, com o aviso *"Ao desativar o modo Dry-run, o JobFinder executará ações reais no LinkedIn (postagens, convites, DMs e candidaturas). Use com responsabilidade."*, modal de confirmação antes de ativar o modo real e persistência imediata da flag em `config.json`.
+- **Seção "Segurança" nas Configurações**: alteração de senha do usuário logado (senha atual, nova senha, confirmação) com validações (mínimo de 6 caracteres, confirmação, senha atual correta) e atualização do hash em `auth.json`.
+- **Rota `/configuracoes`** (alias de `/config`, que continua funcionando) com o item da sidebar apontando para o novo endereço.
+- **Badge "Real Mode"** (vermelho) no topo quando o dry-run está desativado, ao lado do badge âmbar `dry-run` quando está ativo; o avatar do header mostra as iniciais da conta logada.
+
+### Changed
+
+- **Flag `dryRun` aplicada de verdade no backend**: novo `src/server/storage/configSync.mjs` mantém o objeto de configuração vivo sincronizado após `PUT /api/config` (antes um toggle só valia após reiniciar o servidor). `createLinkedInClient` passou a respeitar a flag lendo o config atual e o novo `requireLiveLinkedInClient` bloqueia ações reais **sem canal conectado** com `503 channel_required` em vez de simular silenciosamente — usado pelo publisher (postagens), pelos convites e pelas cascatas de DM (o tick é marcado como `skipped` com o motivo, sem travar o worker).
+- **`auth.json` faz parte do skeleton** (`DATA_FILES`): `jobfinder install` e o smoke test do CI criam/validam o arquivo; o `AuthStore` também migra arquivos antigos (preenche `sessionSecret`/usuário).
+- Startup do servidor registra no log e no console o usuário de login e avisa quando a **senha padrão** ainda está em uso.
+- Versão `0.1.02` → `0.1.04` (npm `0.1.4`): a `0.1.03` já tinha sido consumida pelo release do badge de versão dinâmica na sidebar.
+
+### Fixed
+
+- **Encerramento prematuro do processo Node.js na inicialização**: o app imprimia o banner de startup (`listening on http://127.0.0.1:4040` + `DRY-RUN mode`) e o processo morria em seguida, devolvendo o terminal ao prompt. Desde o Node 15, qualquer `unhandledRejection` derruba o processo silenciosamente (exit 1) — uma promise solta em qualquer serviço (storage, workers, LLM, LinkedIn) era suficiente para matar o app logo após o banner. Além disso, um `EPIPE` no stdout herdado (terminal/pipe que desaparece — caso do Windows/MobaXterm) também encerrava o processo sem mensagem visível. Agora `src/server/index.mjs` e `scripts/cli.mjs` instalam handlers de processo no topo: `unhandledRejection` é registrado no log (e no console) sem derrubar o servidor; `uncaughtException` encerra de forma visível; erros de `stdout`/`stderr` (EPIPE) são ignorados; o `http.Server` fica pinado em escopo de módulo e em `globalThis.__jobfinder`; o shutdown (SIGINT/SIGTERM/SIGBREAK) é idempotente, para os workers e força a saída após 3 s; o launcher só encerra quando o servidor filho termina e passa a imprimir `[jobfinder] server exited (code/signal)` — a causa do encerramento nunca mais fica invisível. Teste de regressão: `node scripts/manual-tests/startup-keepalive.mjs` (boot via launcher, boot direto, `unhandledRejection` injetado, stdout fechado e shutdown gracioso).
+
 ## [0.1.03] — 2026-11-12
 
 ### Fixed

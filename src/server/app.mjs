@@ -11,6 +11,8 @@ import path from 'node:path';
 
 import { UI_DIST, REPO_ROOT } from './paths.mjs';
 import { createApiRouter } from './routes/index.mjs';
+import { authRoutes } from './routes/auth.mjs';
+import { requireAuth } from './middleware/auth.mjs';
 
 function readPkgVersion() {
   try {
@@ -39,8 +41,12 @@ export function createApp({ store, logger, config, rateLimiter, dataDir }) {
     next();
   });
 
+  // Public auth routes (login/logout/session) — mounted before the guard.
+  app.use('/api/auth', authRoutes({ store, logger, config }));
+
+  // Everything else under /api requires an active local session.
   const api = createApiRouter({ store, logger, config, rateLimiter, dataDir });
-  app.use('/api', api);
+  app.use('/api', requireAuth({ store, logger }), api);
 
   // Static UI (built by Vite). In dev, the Vite server proxies /api here.
   if (fs.existsSync(UI_DIST)) {

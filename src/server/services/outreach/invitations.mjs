@@ -12,7 +12,7 @@
 import { HttpError } from '../../middleware/errors.mjs';
 import { countThisWeek } from '../../middleware/rateLimiter.mjs';
 import { renderTemplate, sanitizeInvitationMessage } from './templates.mjs';
-import { createLinkedInClient } from '../linkedin/index.mjs';
+import { createLinkedInClient, requireLiveLinkedInClient } from '../linkedin/index.mjs';
 
 /** Weekly quota state for the UI (Goal Gradient: "X de 100"). */
 export function invitationsQuota(store, config) {
@@ -21,7 +21,7 @@ export function invitationsQuota(store, config) {
   return { used, limit, remaining: Math.max(limit - used, 0), percentage: limit ? Math.round((used / limit) * 100) : 0 };
 }
 
-/** People search through the active client (dry-run when not connected). */
+/** People search through the active client (read-only: simulated results are fine). */
 export async function searchProfiles(ctx, keyword, options) {
   const { store, logger, config, rateLimiter } = ctx;
   const { client, mode } = createLinkedInClient({ store, logger, config, rateLimiter });
@@ -48,7 +48,8 @@ export async function sendInvitations(ctx, input) {
   }
 
   const quota = invitationsQuota(store, config);
-  const { client, mode } = createLinkedInClient({ store, logger, config, rateLimiter });
+  // Invitations are real actions: with dry-run OFF a channel is mandatory.
+  const { client, mode } = requireLiveLinkedInClient({ store, logger, config, rateLimiter });
 
   const results = [];
   let sentCount = 0;

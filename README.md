@@ -29,15 +29,15 @@ Everything is driven from a React dashboard at `http://localhost:4040` — metri
 Windows / CMD / MobaXterm:
 
 ```bash
-npx.cmd --yes --prefer-online @danhachuel/jobfinder@0.1.4 install
-npx.cmd --yes --prefer-online @danhachuel/jobfinder@0.1.4
+npx.cmd --yes --prefer-online @danhachuel/jobfinder@0.1.6 install
+npx.cmd --yes --prefer-online @danhachuel/jobfinder@0.1.6
 ```
 
 Normal terminal:
 
 ```bash
-npx --yes @danhachuel/jobfinder@0.1.4 install
-npx --yes @danhachuel/jobfinder@0.1.4
+npx --yes @danhachuel/jobfinder@0.1.6 install
+npx --yes @danhachuel/jobfinder@0.1.6
 ```
 
 `install` creates `~/.jobfinder/` (config, auth, channels, topics, posts, connections, dm-cascades, jobs, applications, resume, logs). It is safe to re-run: existing data is never overwritten.
@@ -112,9 +112,19 @@ Manual smoke tests (start a temporary server + Playwright for the UI):
 node scripts/manual-tests/fase1-auth-dryrun.mjs        # API: login, sessão, toggle dry-run, troca de senha
 node scripts/manual-tests/fase1-dryrun-services.mjs    # API: flag dry-run aplicada a postagens/convites/DMs
 node scripts/manual-tests/fase1-ui-e2e.mjs             # UI (Playwright): login, badges, configurações, logout
+node scripts/manual-tests/startup-keepalive.mjs        # runtime: boot, unhandledRejection, EPIPE, sinais
+node --test tests/*.js                                # contratos/concorrência/UI (stubs por enquanto)
 ```
 
-Layout: `scripts/cli.mjs` (launcher) · `src/server/` (Express API, JSON store, LinkedIn + LLM services, workers) · `src/ui/` (React + Vite + Tailwind v4).
+### Regression-prevention skills (read before changing code)
+
+[AGENTS.md](AGENTS.md) is the entry point: every agent (and every task) must read the seven
+skills in `.agents/skills/` before touching the repo — systemic view of dependencies, one
+session per repository, surgical scope (no unrequested refactors), atomic JSON writes through
+the store, Windows runtime resilience, contract tests that exercise real behavior, and
+predictable React state.
+
+Layout: `scripts/cli.mjs` (launcher) · `src/server/` (Express API, JSON store, LinkedIn + LLM services, workers) · `src/ui/` (React + Vite + Tailwind v4) · `.agents/skills/` (regression rules) · `tests/` (contract/concurrency/UI stubs).
 
 ## Publishing
 

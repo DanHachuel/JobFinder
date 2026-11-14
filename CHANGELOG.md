@@ -6,6 +6,19 @@ All notable changes to JobFinder are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.06] — 2026-11-13
+
+### Added
+
+- **Skills de prevenção de regressões (`.agents/skills/`)**: sete documentos obrigatórios, adaptados das lições do Thunderbolt para a arquitetura React + Node + JSON do JobFinder — `systemic-view-guard` (dependências entre UI/API/serviços/storage/launcher), `parallel-session-guard` (uma sessão por repositório, `git status` pré-commit, `rebase` antes do push), `surgical-scope-guard` (menor diff possível, arquivos sensíveis só com autorização explícita), `atomic-write-guard` (toda escrita em JSON via `JsonStore`, nunca `fs.writeFileSync` em estado), `windows-runtime-guard` (handlers de `unhandledRejection`/EPIPE/sinais, `spawn` com `windowsHide` + `creationFlags` + `stdio: pipe`), `contract-test-guard` (testar comportamento HTTP/clique/persistência, não strings) e `react-state-guard` (backend como fonte da verdade, sem `setInterval` sem limpeza, `AbortController` no polling).
+- **`AGENTS.md` na raiz**: instrução de leitura obrigatória das skills, regras de projeto (versionamento visual, release via GitHub Actions, push com `rebase`, suíte de testes antes do commit, proibição de sessões paralelas), mapa rápido do repositório e convenções de código.
+- **`tests/`**: pasta criada com stubs (`test_systemic_dependencies.js`, `test_atomic_write_concurrency.js`, `test_windows_keepalive.js`, `test_api_contracts.js`, `test_ui_state.spec.js`) documentando o que cada suíte deve cobrir nas próximas fases — rodáveis com `node --test tests/*.js`.
+- **README**: nova seção em "Development" descrevendo as skills, o `AGENTS.md` e a suíte de testes.
+
+### Notas
+
+- Nenhum código funcional foi alterado: apenas documentação, `AGENTS.md` e stubs de teste. A suíte existente (`scripts/manual-tests/`) continua passando (82 checks) e os stubs rodam limpos com `node --test tests/*.js` (5 skipped).
+
 ## [0.1.05] — 2026-11-13
 
 ### Changed

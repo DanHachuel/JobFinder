@@ -10,6 +10,7 @@ import path from 'node:path';
 
 import { resolveDataDir as resolveDataDirPath } from '../paths.mjs';
 import { defaultAuthPayload } from './authStore.mjs';
+import { defaultWorkerState, defaultWorkerControl } from './workerState.mjs';
 
 /** Files created on first run, in creation order. */
 export const DATA_FILES = [
@@ -23,6 +24,8 @@ export const DATA_FILES = [
   'jobs.json',
   'applications.json',
   'resume.json',
+  'worker-state.json',
+  'worker-control.json',
 ];
 
 /** Default configuration written to config.json on first run. */
@@ -119,6 +122,10 @@ function initialPayload(file) {
       return SEED_TOPICS.map((t) => ({ ...t, createdAt: new Date().toISOString() }));
     case 'resume.json':
       return DEFAULT_RESUME;
+    case 'worker-state.json':
+      return defaultWorkerState();
+    case 'worker-control.json':
+      return defaultWorkerControl();
     default:
       return [];
   }

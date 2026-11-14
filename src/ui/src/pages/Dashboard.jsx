@@ -9,6 +9,7 @@ import { PenLine, Users, MessageSquare, Briefcase, Wifi, RefreshCw, Activity } f
 import { api } from '../lib/api.js';
 import { MetricCard, QuotaBar, Spinner, EmptyState } from '../components/Widgets.jsx';
 import { BarsChart, DoughnutChart } from '../components/Charts.jsx';
+import WorkerPanel from '../components/WorkerPanel.jsx';
 import { formatDateTime, formatRelative } from '../lib/format.js';
 
 export default function Dashboard() {
@@ -83,6 +84,9 @@ export default function Dashboard() {
           <p className="mt-3 text-xs text-gray-400">{data.jobs.saved ?? data.jobs.total} vagas salvas · match médio {data.jobs.averageScore}</p>
         </div>
       </div>
+
+      {/* Background worker (autonomous automation) */}
+      <WorkerPanel />
 
       {/* Charts */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

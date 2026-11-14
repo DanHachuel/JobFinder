@@ -7,6 +7,7 @@ import React from 'react';
 import { PlayCircle, FlaskConical, ShieldCheck, Zap } from 'lucide-react';
 
 import { initialsFrom, useAuth } from '../lib/auth.jsx';
+import WorkerBadge from './WorkerBadge.jsx';
 
 const TUTORIAL_URL = 'https://github.com/DanHachuel/JobFinder#tutorial';
 
@@ -38,6 +39,7 @@ export default function Header({ title, dryRun, connected, mode }) {
             conectado
           </span>
         )}
+        <WorkerBadge />
       </div>
       <div className="flex items-center gap-4">
         <a

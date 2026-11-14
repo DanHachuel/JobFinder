@@ -16,6 +16,7 @@ import { dmsRoutes } from './dms.mjs';
 import { jobsRoutes } from './jobs.mjs';
 import { applicationsRoutes } from './applications.mjs';
 import { dashboardRoutes } from './dashboard.mjs';
+import { workerRoutes } from './worker.mjs';
 
 export function createApiRouter(ctx) {
   const router = Router();
@@ -30,6 +31,7 @@ export function createApiRouter(ctx) {
   router.use(jobsRoutes(ctx));
   router.use(applicationsRoutes(ctx));
   router.use(dashboardRoutes(ctx));
+  router.use(workerRoutes(ctx));
 
   return router;
 }

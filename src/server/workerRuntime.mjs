@@ -1,0 +1,72 @@
+/**
+ * JobFinder — worker process runtime (spawn / ownership).
+ *
+ * Shared by the launcher (scripts/cli.mjs) and the API (so the UI can start
+ * the worker on demand). Both sides must agree on ONE running worker: the
+ * state file heartbeat is the ownership token — a new process that finds a
+ * fresh heartbeat from a different pid exits immediately instead of
+ * creating a duplicate.
+ *
+ * Spawn flags follow windows-runtime-guard: never `stdio: 'inherit'`
+ * (a broken terminal would kill the child with EPIPE), `windowsHide: true`
+ * and CREATE_NEW_PROCESS_GROUP (0x00000200) on Windows.
+ */
+import { spawn } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+/** Absolute path of the worker entrypoint. */
+export const WORKER_ENTRY = path.join(__dirname, 'worker.mjs');
+
+export const CREATE_NEW_PROCESS_GROUP = 0x00000200;
+
+/**
+ * Spawn the worker as a detached-enough child of the caller.
+ * @param {{ env?: object, cwd?: string }} [options]
+ * @returns {import('node:child_process').ChildProcess}
+ */
+export function spawnWorker(options = {}) {
+  const child = spawn(process.execPath, [WORKER_ENTRY], {
+    cwd: options.cwd ?? path.resolve(__dirname, '..', '..'),
+    env: { ...process.env, ...(options.env ?? {}) },
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: true,
+    creationFlags: process.platform === 'win32' ? CREATE_NEW_PROCESS_GROUP : 0,
+  });
+  return child;
+}
+
+/** Pipe a child's output to the console with a prefix (never inherit). */
+export function forwardChildOutput(child, prefix, { onLine } = {}) {
+  const emit = (stream) => (chunk) => {
+    const text = String(chunk);
+    if (onLine) {
+      for (const line of text.split('\n')) {
+        if (line.trim()) onLine(line);
+      }
+    } else {
+      process.stdout.write(`${prefix} ${text}`);
+    }
+    void stream;
+  };
+  child.stdout?.on('data', emit('stdout'));
+  child.stderr?.on('data', (chunk) => {
+    const text = String(chunk);
+    if (onLine) {
+      for (const line of text.split('\n')) {
+        if (line.trim()) onLine(line);
+      }
+    } else {
+      process.stderr.write(`${prefix} ${text}`);
+    }
+  });
+  // A dead pipe must never kill the launcher.
+  child.stdout?.on?.('error', (err) => {
+    if (err?.code !== 'EPIPE') console.error(`${prefix} stdout error: ${err?.code ?? ''}`);
+  });
+  child.stderr?.on?.('error', (err) => {
+    if (err?.code !== 'EPIPE') console.error(`${prefix} stderr error: ${err?.code ?? ''}`);
+  });
+}

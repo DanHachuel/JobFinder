@@ -17,7 +17,6 @@ import { fileURLToPath } from 'node:url';
 import { createApp } from './app.mjs';
 import { createContext } from './context.mjs';
 import { resolveDataDir, UI_DIST } from './paths.mjs';
-import { startWorkers } from './services/workers.mjs';
 
 /**
  * Logger used by the global process handlers below. Assigned by start():
@@ -148,19 +147,16 @@ export async function start() {
     process.exit(1);
   });
 
-  // Background workers: post scheduler + DM cascade engine + inbox monitoring.
-  const workers = startWorkers(context);
+  // Time-based automation (scheduled posts, DM cascades, inbox monitoring)
+  // runs in the standalone background worker process (src/server/worker.mjs),
+  // spawned by the launcher or by POST /api/worker/start. Keeping it out of
+  // this process means closing the browser never pauses the automations.
 
   let shuttingDown = false;
   const shutdown = (signal) => {
     if (shuttingDown) return;
     shuttingDown = true;
     logger.info('shutdown', `received ${signal}`);
-    try {
-      workers?.stop?.();
-    } catch {
-      /* stopping workers is best-effort */
-    }
     server.close(() => process.exit(0));
     // Never hang on a stuck keep-alive connection: force the exit.
     setTimeout(() => process.exit(0), 3000).unref();

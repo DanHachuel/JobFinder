@@ -58,10 +58,17 @@ export class JsonStore {
     }
   }
 
-  /** Atomically write a JSON file (pretty-printed, trailing newline). */
+  /**
+   * Atomically write a JSON file (pretty-printed, trailing newline).
+   *
+   * The temp file name carries the pid: the API process and the background
+   * worker process share the same data directory, and a fixed
+   * `<file>.tmp` would make both rename into each other (EPERM / lost
+   * updates on Windows).
+   */
   write(name, data) {
     const file = this.path(name);
-    const tmp = `${file}.tmp`;
+    const tmp = `${file}.tmp.${process.pid}`;
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(tmp, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
     fs.renameSync(tmp, file);

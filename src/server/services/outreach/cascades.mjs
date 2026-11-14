@@ -12,7 +12,7 @@
  */
 import { HttpError } from '../../middleware/errors.mjs';
 import { countToday } from '../../middleware/rateLimiter.mjs';
-import { requireLiveLinkedInClient } from '../linkedin/index.mjs';
+import { createLinkedInClient, requireLiveLinkedInClient } from '../linkedin/index.mjs';
 
 export const MAX_STEPS = 5; // hard limit from the PRD (dmsPorDia)
 

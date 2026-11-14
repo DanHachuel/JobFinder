@@ -41,10 +41,16 @@ export function assertPublishable(post) {
  */
 export async function publishPost(ctx, postId) {
   const { store, logger, config, rateLimiter } = ctx;
+  // The API and the background worker are separate processes writing the
+  // same posts.json: drop the local cache first so a post created by the UI
+  // while the worker publishes is never lost (documented "external writer"
+  // case of atomic-write-guard).
+  store.invalidate('posts.json');
   const post = store.find('posts.json', postId);
   const text = assertPublishable(post);
 
   await store.patch('posts.json', postId, { status: 'publishing', error: null, updatedAt: new Date().toISOString() });
+  store.invalidate('posts.json');
 
   let mode = 'dry-run';
   try {

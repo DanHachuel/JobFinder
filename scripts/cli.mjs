@@ -24,6 +24,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 import { ensureDataDir, resolveDataDir, isDataDirHealthy } from '../src/server/storage/bootstrap.mjs';
+import { spawnWorker, forwardChildOutput } from '../src/server/workerRuntime.mjs';
 
 /**
  * Process resilience for the launcher — installed before anything else runs
@@ -202,10 +203,35 @@ async function commandStart({ port, host, dataDir, dryRun }) {
 
   const child = spawn(process.execPath, [SERVER_ENTRY], { stdio: 'inherit', env, cwd: ROOT });
 
+  // Background worker: a SEPARATE process so the automation queues keep
+  // running when the browser is closed (or was never opened). Spawn follows
+  // windows-runtime-guard: windowsHide + new process group + piped stdio
+  // (never 'inherit'). Disable with JOBFINDER_NO_WORKER=1.
+  let worker = null;
+  if (process.env.JOBFINDER_NO_WORKER === '1') {
+    console.log(' Worker         : disabled (JOBFINDER_NO_WORKER=1)');
+  } else {
+    worker = spawnWorker({ env: { JOBFINDER_DATA_DIR: resolved } });
+    forwardChildOutput(worker, '[worker]');
+    worker.on('exit', (code, signal) => {
+      console.error(`\n[jobfinder] worker exited (${signal ? `signal ${signal}` : `code ${code}`}).`);
+    });
+    console.log(` Worker         : automação em segundo plano (pid ${worker.pid})`);
+  }
+
   // The `child` handle keeps this launcher's event loop open for as long as
   // the server runs: the CLI stays in the foreground and the terminal only
   // returns to the prompt when the server itself exits (or on Ctrl+C).
   let stopping = false;
+  const stopChildren = () => {
+    if (worker && worker.exitCode === null && worker.signalCode === null) {
+      worker.kill('SIGTERM');
+      // Hard deadline: a worker that ignores SIGTERM must not linger.
+      setTimeout(() => {
+        if (worker.exitCode === null && worker.signalCode === null) worker.kill('SIGKILL');
+      }, 2000).unref();
+    }
+  };
   const forward = (signal) => () => {
     // A second Ctrl+C must never be ignored: force the exit if the graceful
     // path is stuck.
@@ -213,6 +239,7 @@ async function commandStart({ port, host, dataDir, dryRun }) {
       process.exit(1);
     }
     stopping = true;
+    stopChildren();
     if (child.exitCode !== null || child.signalCode !== null) {
       process.exit(child.exitCode ?? (child.signalCode ? 1 : 0));
       return;
@@ -233,6 +260,7 @@ async function commandStart({ port, host, dataDir, dryRun }) {
     // crash back at the prompt.
     const reason = signal ? `signal ${signal}` : `code ${code}`;
     console.error(`\n[jobfinder] server exited (${reason}).`);
+    stopChildren();
     process.exit(code ?? (signal ? 1 : 0));
   });
 }

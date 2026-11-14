@@ -13,7 +13,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request(method, path, { body, raw, query, headers } = {}) {
+async function request(method, path, { body, raw, query, headers, signal } = {}) {
   const url = new URL(`${BASE}${path}`, window.location.origin);
   if (query) {
     for (const [key, value] of Object.entries(query)) {
@@ -24,6 +24,7 @@ async function request(method, path, { body, raw, query, headers } = {}) {
   }
 
   const init = { method, headers: { ...(headers ?? {}) } };
+  if (signal) init.signal = signal;
   if (body !== undefined) {
     if (raw) {
       // raw: body is already formatted (string / FormData / ArrayBuffer)

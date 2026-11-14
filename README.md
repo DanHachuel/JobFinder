@@ -18,6 +18,8 @@
 
 Everything is driven from a React dashboard at `http://localhost:4040` — metric cards, Chart.js charts, progress and quota bars, toasts.
 
+A **background worker** (separate Node process) keeps the queues moving even with the browser closed: scheduled posts are published and DM cascades advance on their own, always respecting the daily limits and the dry-run flag.
+
 ## Requirements
 
 - **Node.js ≥ 20.19** (developed/tested on Node 22)
@@ -29,15 +31,15 @@ Everything is driven from a React dashboard at `http://localhost:4040` — metri
 Windows / CMD / MobaXterm:
 
 ```bash
-npx.cmd --yes --prefer-online @danhachuel/jobfinder@0.1.6 install
-npx.cmd --yes --prefer-online @danhachuel/jobfinder@0.1.6
+npx.cmd --yes --prefer-online @danhachuel/jobfinder@0.1.7 install
+npx.cmd --yes --prefer-online @danhachuel/jobfinder@0.1.7
 ```
 
 Normal terminal:
 
 ```bash
-npx --yes @danhachuel/jobfinder@0.1.6 install
-npx --yes @danhachuel/jobfinder@0.1.6
+npx --yes @danhachuel/jobfinder@0.1.7 install
+npx --yes @danhachuel/jobfinder@0.1.7
 ```
 
 `install` creates `~/.jobfinder/` (config, auth, channels, topics, posts, connections, dm-cascades, jobs, applications, resume, logs). It is safe to re-run: existing data is never overwritten.
@@ -63,7 +65,8 @@ The app is protected by a local session. On the first run a single user is creat
    - **Fallback:** export cookies with ["Get cookies.txt LOCALLY"](https://chromewebstore.google.com/) and upload `cookies.txt`
 3. **Configurações** → choose your LLM provider and tune the rate limits (100 invites/week, 5 DMs/day, 20 applications/day by default)
 4. **Dry-run is ON by default** — explore the whole app safely; disable it in **Configurações → Execução** when you are ready (the header then shows the red `Real Mode` badge)
-5. Publish posts, connect with people, run DM cascades, match and apply to jobs
+5. The **worker** starts with the app and keeps processing the queues in the background — the header badge shows active/paused/stopped, and the Painel (or Configurações → Execução) lets you pause, resume or force a pass. Closing the browser never pauses the automations
+6. Publish posts, connect with people, run DM cascades, match and apply to jobs
 
 ### Useful flags
 
@@ -92,6 +95,8 @@ node scripts/cli.mjs --version             # version info
 ├── jobs.json            # saved/discarded jobs + match scores
 ├── applications.json    # applications + reports
 ├── resume.json          # parsed resume
+├── worker-state.json    # background worker: heartbeat, fila ativa, últimas ações
+├── worker-control.json  # estado desejado do worker (running | paused)
 └── logs/YYYY-MM-DD.jsonl
 ```
 
@@ -113,6 +118,7 @@ node scripts/manual-tests/fase1-auth-dryrun.mjs        # API: login, sessão, to
 node scripts/manual-tests/fase1-dryrun-services.mjs    # API: flag dry-run aplicada a postagens/convites/DMs
 node scripts/manual-tests/fase1-ui-e2e.mjs             # UI (Playwright): login, badges, configurações, logout
 node scripts/manual-tests/startup-keepalive.mjs        # runtime: boot, unhandledRejection, EPIPE, sinais
+node scripts/manual-tests/fase2-worker.mjs             # worker: spawn, filas, limite de DMs, órfãos, estresse
 node --test tests/*.js                                # contratos/concorrência/UI (stubs por enquanto)
 ```
 

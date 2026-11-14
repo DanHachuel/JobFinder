@@ -6,6 +6,35 @@ All notable changes to JobFinder are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.07] — 2026-11-14
+
+### Added
+
+- **Background Worker autônomo (`src/server/worker.mjs`)**: processo Node separado que mantém as automações rodando com o navegador fechado (ou nunca aberto). Spawnado pelo launcher (`scripts/cli.mjs`) com `windowsHide: true`, `creationFlags: 0x00000200` e `stdio: 'pipe'` (nunca `inherit`), e sob demanda pela API (`POST /api/worker/start`). Loop próprio (padrão 30 s, `JOBFINDER_WORKER_INTERVAL`) com heartbeat a cada 5 s em `worker-state.json`.
+- **Endpoint `GET /api/worker/status`**: `isRunning`, `status`, `desired`, `pid`, `activeTask` (ex.: "publicando 2 post(s) agendado(s) · processando 3 cascata(s) de DM"), `nextTickAt`, `lastTickAt`, `intervalMs`, `lastError`, `stats` (passes, posts publicados, DMs enviadas, cascatas pausadas, ignorados, falhas) e as 10 últimas ações (`logs`).
+- **Controles na UI**: `POST /api/worker/start`, `POST /api/worker/stop` (pausa — o processo continua vivo e ocioso) e `POST /api/worker/tick` (força um passe; usado por testes e quem quer agir agora). Botões **Iniciar/Pausar** e **Executar agora** no card "Automação em segundo plano" do Painel e na seção **Execução** das Configurações.
+- **Worker Status Badge** no cabeçalho: ponto verde pulsante "Worker ativo", âmbar "Worker pausado" ou cinza "Worker parado".
+- **`worker-state.json` / `worker-control.json`** no data dir (`DATA_FILES`), escritos sempre via `JsonStore`: o worker publica estado, a API publica apenas o `desired` — nenhuma escrita concorrente entre os dois processos no mesmo arquivo.
+
+### Changed
+
+- **Fila compartilhada entre processos**: `runWorkerPass` invalida o cache de `posts.json`/`dm-cascades.json`/`connections.json` e `publishPost` invalida `posts.json` antes de cada mutação. Sem isso o worker (cache próprio) nunca via itens criados pela UI e um post podia ser sobrescrito. É o caso documentado de "escritor externo" do `atomic-write-guard`.
+- **`syncLiveConfig` passa a invalidar o cache** antes de ler: o worker agora reage ao toggle de dry-run da UI sem precisar reiniciar (antes o toggle só valeria no processo da API).
+- **`JsonStore.write` usa arquivo temporário por PID** (`<arquivo>.tmp.<pid>`): com API e worker no mesmo diretório de dados, um `.tmp` fixo causava `EPERM` no `rename` no Windows.
+- **Cron interno removido da API** (`index.mjs` não chama mais `startWorkers`): `services/workers.mjs` virou `runWorkerPass` — um passe de trabalho puro, compartilhado pelo worker e pela rota de tick manual. Nenhum `setInterval` fica no processo da API.
+- **`GET /api/worker/status` como fonte da verdade da UI** (react-state-guard): `useWorkerStatus` faz polling de 5 s com `setTimeout` recursivo + `AbortController` e cleanup; `api.js` aceita `signal`.
+- **Worker não fica órfão**: além de o launcher encerrar o filho no SIGINT/SIGTERM/SIGBREAK (com `SIGKILL` após 2 s), o worker detecta a morte do pai (`process.ppid`) e se encerra — inclusive quando o launcher é morto à força.
+
+### Fixed
+
+- **`createLinkedInClient is not defined` em `checkReplies`**: a migração da Fase 1 para `requireLiveLinkedInClient` deixou `checkReplies` sem o cliente de leitura; a checagem de respostas (pausar cascata quando o contato responde) quebrava silenciosamente dentro do worker.
+- **Worker morria instantaneamente (exit code 0)**: os timers do loop estavam `unref()` — num processo cujo único trabalho é o loop, isso esvazia o event loop. O `unref()` só é correto no cron interno do servidor (onde o socket mantém o loop vivo).
+
+### Tests
+
+- Nova suíte `scripts/manual-tests/fase2-worker.mjs` — **39 verificações, 0 falhas** (3 execuções consecutivas): spawn pelo launcher, post agendado publicado automaticamente em dry-run, limite de 5 DMs/dia, bloqueio de ação real sem canal, JSON corrompido não derruba o worker (com backup do store), estresse de 10 posts no mesmo minuto sem corromper o JSON, pausar/retomar pela API e ausência de processos órfãos no Windows.
+- Suíte de regressão íntegra: `fase1-auth-dryrun` 32/32 · `fase1-dryrun-services` 16/16 · `fase1-ui-e2e` 22/22 · `startup-keepalive` 12/12.
+
 ## [0.1.06] — 2026-11-13
 
 ### Added

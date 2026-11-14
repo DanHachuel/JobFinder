@@ -12,6 +12,10 @@ import {
   KeyRound,
   Lock,
   TriangleAlert,
+  Play,
+  Pause,
+  RefreshCw,
+  Loader2,
 } from 'lucide-react';
 
 import { api } from '../lib/api.js';
@@ -19,6 +23,7 @@ import { useAuth } from '../lib/auth.jsx';
 import { useAppState } from '../components/Layout.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { Spinner, Modal } from '../components/Widgets.jsx';
+import { useWorkerStatus, setWorkerRunning, tickWorker, relativeTime } from '../lib/useWorkerStatus.js';
 
 const PROVIDERS = [
   ['ollama', 'Ollama (local, sem chave)'],
@@ -43,6 +48,8 @@ export default function ConfigPage() {
   const [savingPassword, setSavingPassword] = useState(false);
   const [savingDryRun, setSavingDryRun] = useState(false);
   const [confirmLive, setConfirmLive] = useState(false);
+  const [workerBusy, setWorkerBusy] = useState(null);
+  const worker = useWorkerStatus();
 
   const load = useCallback(async () => {
     try {
@@ -127,6 +134,26 @@ export default function ConfigPage() {
     }
   };
 
+  /** Start / pause the background worker from Configurações → Execução. */
+  const controlWorker = async (action) => {
+    setWorkerBusy(action);
+    try {
+      if (action === 'tick') {
+        const result = await tickWorker();
+        toast.success(result?.ok === false ? result.message : `Passe executado (${result?.result?.sent ?? 0} DM(s)).`);
+      } else {
+        await setWorkerRunning(action === 'start');
+        toast.success(action === 'start' ? 'Worker em execução.' : 'Worker pausado.');
+      }
+      await worker.refresh();
+      refresh?.();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setWorkerBusy(null);
+    }
+  };
+
   const createTopic = async () => {
     if (!topicDraft.name.trim()) {
       toast.error('Dê um nome ao tema.');
@@ -206,6 +233,43 @@ export default function ConfigPage() {
           O estado é salvo em <code className="font-mono">config.json</code> (`dryRun`) e vale para todo o backend —
           inclusive o scheduler e as cascatas de DM.
         </p>
+
+        {/* Background worker controls */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-4">
+          <div>
+            <p className="text-xs font-semibold text-gray-700">
+              Worker em segundo plano:{' '}
+              <span className={worker.status?.isRunning ? 'text-green-700' : worker.status?.status === 'paused' ? 'text-amber-700' : 'text-gray-600'}>
+                {worker.status?.isRunning ? 'em execução' : worker.status?.status === 'paused' ? 'pausado' : 'parado'}
+              </span>
+              {worker.status?.activeTask ? ` · ${worker.status.activeTask}` : ''}
+            </p>
+            <p className="mt-0.5 text-[11px] text-gray-500">
+              Próxima verificação {worker.status?.nextTickAt ? relativeTime(worker.status.nextTickAt) : '—'} ·{' '}
+              {worker.status?.stats?.ticks ?? 0} passes · {worker.status?.stats?.postsPublished ?? 0} posts ·{' '}
+              {worker.status?.stats?.dmsSent ?? 0} DMs
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              className={worker.status?.isRunning ? 'btn-secondary !px-3 !py-1.5 text-xs' : 'btn-primary !px-3 !py-1.5 text-xs'}
+              onClick={() => controlWorker(worker.status?.isRunning ? 'stop' : 'start')}
+              disabled={workerBusy !== null}
+            >
+              {workerBusy === 'start' || workerBusy === 'stop' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : worker.status?.isRunning ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+              {worker.status?.isRunning ? 'Pausar worker' : 'Iniciar worker'}
+            </button>
+            <button
+              className="btn-secondary !px-3 !py-1.5 text-xs"
+              onClick={() => controlWorker('tick')}
+              disabled={workerBusy !== null || !worker.status?.isRunning}
+              title={worker.status?.isRunning ? 'Executar um passe agora' : 'Disponível com o worker em execução'}
+            >
+              {workerBusy === 'tick' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              Executar agora
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Segurança — senha do usuário local */}

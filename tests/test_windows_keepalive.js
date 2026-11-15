@@ -1,7 +1,7 @@
 /**
  * tests/test_windows_keepalive.js
  *
- * Sobrevivência do processo no Windows (windows-runtime-guard): unhandledRejection,
+ * Sobrevivência do processo em Windows e Linux (runtime-guard): unhandledRejection,
  * EPIPE em stdio, sinais idempotentes e spawn de workers.
  *
  * Status: STUB — a cobertura equivalente já existe em

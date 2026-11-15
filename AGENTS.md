@@ -12,19 +12,19 @@
 | `parallel-session-guard` | início de tarefa, pré-commit, pré-push | uma sessão por repositório; `git status` antes de commitar; `rebase` antes do push |
 | `surgical-scope-guard` | toda edição | menor diff possível; arquivos sensíveis só com autorização explícita |
 | `atomic-write-guard` | qualquer escrita em `storage/` | só via `JsonStore`; nunca `fs.writeFileSync` em estado |
-| `windows-runtime-guard` | launcher, servidor, processos, spawn | manter handlers de EPIPE/rejection; `stdio: 'pipe'`, `windowsHide` |
+| `runtime-guard` | launcher, servidor, processos, spawn | manter handlers de EPIPE/rejection; `stdio: 'pipe'`, `windowsHide`; múltiplas plataformas |
 | `contract-test-guard` | testes e correção de bugs | testar comportamento (HTTP/clique/persistência), não strings |
 | `react-state-guard` | UI React | backend é a fonte da verdade; sem `setInterval` sem limpeza |
 
 ## Regras de projeto
 
-1. **Versão.** Visual `MAJOR.MINOR.PATCH` com PATCH de dois dígitos (`0.1.06`); o npm
-   publica a forma canônica (`0.1.6`). Bump em `package.json`, `src/ui/package.json` e nos
+1. **Versão.** Visual `MAJOR.MINOR.PATCH` com PATCH de dois dígitos (`0.1.10`); o npm
+   publica a forma canônica (`0.1.10`). Bump em `package.json`, `src/ui/package.json` e nos
    dois `package-lock.json`.
 2. **CHANGELOG.** Uma entrada por release, no topo, em `Keep a Changelog`.
 3. **Release.** Exclusivamente via GitHub Actions
    (`.github/workflows/publish-npm.yml`): commit → push → `workflow_dispatch` com
-   `dist_tag=next` → push da tag `v0.1.06` promove a `latest`. Nunca `npm publish` local.
+   `dist_tag=next` → push da tag `v0.1.10` promove a `latest`. Nunca `npm publish` local.
 4. **Push.** Após o commit: `git fetch origin` + `git rebase origin/main` + `git push origin main`.
 5. **Testes.** Rodar a suíte antes de commitar; com falha, **não commitar**:
    ```bash
@@ -40,6 +40,25 @@
    reporte e pergunte — não descarte nem comite trabalho alheio.
 7. **Documentação.** Mudança de comportamento → atualizar `README.md` (comandos de
    instalação, uso) e `CHANGELOG.md` no mesmo commit.
+
+## Regras de Infraestrutura
+
+> **Multiplataforma e Sem Docker Obrigatório:** O projeto deve rodar nativamente no Windows e
+> no Linux. É proibido adicionar dependências obrigatórias de Docker ou containers para o
+> fluxo de desenvolvimento e execução. O código deve ser agnóstico ao sistema operacional.
+
+- **Execução nativa nos dois sistemas.** Windows e Linux são suportados de forma equivalente:
+  `node scripts/cli.mjs` (ou `npx @danhachuel/jobfinder`) precisa subir o app sem nenhuma
+  camada extra de infraestrutura em qualquer um dos dois.
+- **Docker é opcional, nunca requisito.** Pode existir como conveniência de quem quiser usar,
+  mas nenhum teste, script de build, launcher ou documentação pode exigir Docker/containers
+  para desenvolver, testar ou rodar o JobFinder.
+- **Nada que quebre a execução direta via Node.js.** Nenhuma dependência ou abstração de
+  infraestrutura entra no projeto se ela impedir o `node` nativo em Windows ou Linux
+  (ex.: binários exclusivos de um SO, serviço externo obrigatório, paths hardcoded).
+- **Bibliotecas nativas do Node para compatibilidade cruzada.** Use `path`, `os`,
+  `node:fs`, `node:child_process` (com as flags já registradas na skill `runtime-guard`) em
+  vez de assumir shell, separador de caminho ou semântica POSIX.
 
 ## Mapa rápido do repositório
 

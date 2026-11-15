@@ -1,20 +1,40 @@
 ---
-name: windows-runtime-guard
-description: Blindar launcher, servidor e workers contra o ambiente hostil do Windows (MobaXterm, PowerShell, EPIPE, sinais e spawn).
+name: runtime-guard
+description: Blindar launcher, servidor e workers em Windows e Linux (terminais hostis, EPIPE, sinais, spawn) e garantir execução nativa multiplataforma sem Docker obrigatório.
 ---
 
-# Windows Runtime Guard
+# Runtime Guard (Windows e Linux)
 
 ## Propósito
 
-O app roda em Windows, muitas vezes dentro de terminais hostis (MobaXterm, PowerShell,
-redirecionamento de saída, SSH). Nesse ambiente o serviço pode "sumir sem explicação":
-terminal volta ao prompt, processo morre sem mensagem, spawns de worker ficam presos.
+O app roda **nativamente no Windows e no Linux** — às vezes dentro de terminais hostis
+(MobaXterm, PowerShell, redirecionamento de saída, SSH). Nesse ambiente o serviço pode
+"sumir sem explicação": terminal volta ao prompt, processo morre sem mensagem, spawns de
+worker ficam presos. Esta skill protege o runtime nos dois sistemas e registra a regra
+permanente de infraestrutura do projeto.
 
 ## Quando aplicar
 
 Ao mexer em `scripts/cli.mjs`, `src/server/index.mjs`, qualquer `spawn`, sinais de processo
 ou futuros background workers (Fase 2).
+
+## Multiplataforma e Sem Docker Obrigatório (regra permanente)
+
+> **O projeto deve rodar nativamente no Windows e no Linux.** É proibido adicionar
+> dependências obrigatórias de Docker ou containers para o fluxo de desenvolvimento e
+> execução. O código deve ser agnóstico ao sistema operacional.
+
+- **Execução nativa equivalente nos dois sistemas**: `node scripts/cli.mjs` (ou
+  `npx @danhachuel/jobfinder`) precisa subir o app sem camada extra de infraestrutura em
+  Windows **e** em Linux.
+- **Docker é opcional, nunca requisito**: nenhum teste, script de build, launcher ou
+  documentação pode exigir Docker/containers para desenvolver, testar ou rodar o JobFinder.
+- **Nada que quebre a execução direta via Node.js**: entre nenhuma dependência/abstração de
+  infraestrutura que impeça o `node` nativo em algum dos dois sistemas (binário exclusivo de
+  um SO, serviço externo obrigatório, path hardcoded).
+- **Bibliotecas nativas do Node para compatibilidade cruzada**: `path`, `os`, `node:fs`,
+  `node:child_process` (com as flags de spawn desta skill) em vez de assumir shell,
+  separador de caminho ou semântica POSIX.
 
 ## O que já está implementado (NÃO REMOVA)
 
@@ -75,4 +95,6 @@ spawn(cmd, args, { stdio: 'inherit' });
 - [ ] Nenhum `stdio: 'inherit'` novo.
 - [ ] Spawns com `windowsHide` + `creationFlags` + stdio `pipe`.
 - [ ] Sinais tratados de forma idempotente; timer com `unref()`.
-- [ ) Rodei `node scripts/manual-tests/startup-keepalive.mjs` (boot, rejection, EPIPE).
+- [ ] Nenhuma dependência/abstração obrigatória quebrando o `node` nativo em Windows ou
+      Linux; zero exigência de Docker/containers no fluxo de desenvolvimento e execução.
+- [ ] Rodei `node scripts/manual-tests/startup-keepalive.mjs` (boot, rejection, EPIPE).

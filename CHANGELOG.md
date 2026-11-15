@@ -6,6 +6,13 @@ All notable changes to JobFinder are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.10] — 2026-11-15
+
+### Documentation
+
+- **Regra permanente de infraestrutura**: nova seção "Regras de Infraestrutura" no `AGENTS.md` — **Multiplataforma e Sem Docker Obrigatório**. O JobFinder deve rodar nativamente no Windows e no Linux; é proibido adicionar dependências obrigatórias de Docker/containers para desenvolvimento, testes ou execução; nada pode quebrar a execução direta via Node.js em nenhum dos dois sistemas; compatibilidade cruzada via bibliotecas nativas do Node (`path`, `os`, `node:fs`, `node:child_process`).
+- **Skill `windows-runtime-guard` → `runtime-guard`** (renomeada para refletir o escopo multiplataforma): além do Blindagem de runtime (EPIPE, sinais, spawn), passou a documentar explicitamente a regra de execução nativa em Windows e Linux sem imposição de Docker, com item dedicado no checklist. Referências atualizadas no `AGENTS.md` e na stub `tests/test_windows_keepalive.js`.
+
 ## [0.1.08] — 2026-11-15
 
 ### Fixed

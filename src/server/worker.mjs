@@ -124,7 +124,16 @@ function beatHeartbeat() {
   }
 }
 
-/** True when the parent launcher disappeared (orphan guard on Windows). */
+/**
+ * True when the parent launcher disappeared (orphan guard on Windows).
+ *
+ * Only ESRCH (the pid does not exist) means the parent is gone. ANY other
+ * error — EPERM, EINVAL, anything the host decides to return — means
+ * "unknown", and an unknown parent must be treated as ALIVE: on Windows the
+ * liveness probe is not a POSIX kill (MobaXterm/npx wrap the real parent),
+ * and the previous "any error = gone" rule made the worker suicide for no
+ * reason whenever the host answered with an unexpected code.
+ */
 function parentIsGone() {
   const ppid = process.ppid;
   if (!ppid || ppid <= 1) return false;
@@ -132,7 +141,7 @@ function parentIsGone() {
     process.kill(ppid, 0);
     return false;
   } catch (err) {
-    return err?.code === 'EPERM' ? false : true;
+    return err?.code === 'ESRCH';
   }
 }
 

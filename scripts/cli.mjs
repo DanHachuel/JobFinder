@@ -24,7 +24,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 import { ensureDataDir, resolveDataDir, isDataDirHealthy } from '../src/server/storage/bootstrap.mjs';
-import { spawnWorker, forwardChildOutput } from '../src/server/workerRuntime.mjs';
+import { spawnWorker, spawnSupervised, forwardChildOutput } from '../src/server/workerRuntime.mjs';
 
 /**
  * Process resilience for the launcher — installed before anything else runs
@@ -201,7 +201,11 @@ async function commandStart({ port, host, dataDir, dryRun }) {
   console.log(` URL            : ${url}`);
   console.log(' Press Ctrl+C to stop.\n');
 
-  const child = spawn(process.execPath, [SERVER_ENTRY], { stdio: 'inherit', env, cwd: ROOT });
+  // The server is a supervised child: piped stdio (never 'inherit' — a
+  // broken terminal must not kill it), windowsHide + a new process group.
+  // Its output is forwarded below; the CLI relays it to the terminal.
+  const child = spawnSupervised(SERVER_ENTRY, { env, cwd: ROOT });
+  forwardChildOutput(child, '');
 
   // Background worker: a SEPARATE process so the automation queues keep
   // running when the browser is closed (or was never opened). Spawn follows
@@ -222,6 +226,20 @@ async function commandStart({ port, host, dataDir, dryRun }) {
   // The `child` handle keeps this launcher's event loop open for as long as
   // the server runs: the CLI stays in the foreground and the terminal only
   // returns to the prompt when the server itself exits (or on Ctrl+C).
+  //
+  // Independent keep-alive: the launcher must NEVER depend on a child handle
+  // to stay alive (regression 0.1.7 — an empty event loop makes Node exit
+  // with code 0, silently, right after the startup banner). This referenced
+  // timer holds the loop open by itself; explicit process.exit() calls in
+  // the signal/exit handlers below still terminate immediately.
+  const keepAlive = setInterval(() => {}, 60_000);
+  void keepAlive;
+
+  // Forensic trail: if the launcher ever dies, the reason is visible.
+  process.on('exit', (code) => {
+    console.error(`[jobfinder] launcher exiting with code ${code}.`);
+  });
+
   let stopping = false;
   const stopChildren = () => {
     if (worker && worker.exitCode === null && worker.signalCode === null) {

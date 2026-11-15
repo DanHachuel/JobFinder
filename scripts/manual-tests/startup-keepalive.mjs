@@ -158,5 +158,74 @@ async function bootAndObserve(label, { args, port, observeMs, env = {} }) {
   fs.rmSync(tmp, { recursive: true, force: true });
 }
 
+// 5) o worker sobe junto, bate heartbeat e o CLI continua vivo depois
+//    dele (regressao 0.1.7: event loop vazio matava o launcher).
+{
+  console.log('\n== boot com worker: heartbeat + CLI independente do worker ==');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jobfinder-keepalive-worker-'));
+  const home = path.join(tmp, 'data');
+  const child = spawn(process.execPath, [path.join(ROOT, 'scripts', 'cli.mjs'), 'start', '--no-open'], {
+    cwd: ROOT,
+    env: { ...process.env, JOBFINDER_PORT: '4185', JOBFINDER_DATA_DIR: home, JOBFINDER_NO_OPEN: '1' },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let out = '';
+  child.stdout.on('data', (d) => { out += String(d); });
+  child.stderr.on('data', (d) => { out += String(d); });
+
+  const workerPid = async () => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(home, 'worker-state.json'), 'utf8')).pid ?? null;
+    } catch {
+      return null;
+    }
+  };
+
+  await wait(3000);
+  const pid0 = await workerPid();
+  check('worker spawnado publicou o pid no estado', Boolean(pid0), `pid=${pid0}`);
+  check('output do launcher anuncia o worker', /Worker\s+:\s+automa/.test(out));
+
+  await wait(4000); // passa de 1 heartbeat (5s): o guardiao de orfaos rodou
+  const pid1 = await workerPid();
+  check('worker continua vivo apos os heartbeats (sem falso positivo do guardiao)', pid1 === pid0 && (await getStatus(4185, '/api/health')) === 200, `pid=${pid1}`);
+
+  // CRASH do worker: o CLI NAO pode morrer — so logar.
+  try {
+    process.kill(Number(pid1), 'SIGTERM');
+  } catch {
+    /* processo pode ja ter saido */
+  }
+  await wait(2500);
+  check('CLI sobrevive ao crash do worker', !dead(child), dead(child) ? `exitCode=${child.exitCode} signal=${child.signalCode}` : 'vivo');
+  check('SAIBA do worker foi registrada no log', /worker exited/i.test(out), out.split('\n').filter((l) => /worker exited/i.test(l))[0] ?? '');
+  check('servidor continua respondendo apos o crash do worker', (await getStatus(4185, '/api/health')) === 200);
+  child.kill();
+  await wait(800);
+  fs.rmSync(tmp, { recursive: true, force: true });
+}
+
+// 6) JOBFINDER_NO_WORKER=1: modo sem worker, CLI continua vivo
+{
+  console.log('\n== boot sem worker (JOBFINDER_NO_WORKER=1) ==');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jobfinder-keepalive-noworker-'));
+  const home = path.join(tmp, 'data');
+  const child = spawn(process.execPath, [path.join(ROOT, 'scripts', 'cli.mjs'), 'start', '--no-open'], {
+    cwd: ROOT,
+    env: { ...process.env, JOBFINDER_PORT: '4187', JOBFINDER_DATA_DIR: home, JOBFINDER_NO_OPEN: '1', JOBFINDER_NO_WORKER: '1' },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let out = '';
+  child.stdout.on('data', (d) => { out += String(d); });
+  child.stderr.on('data', (d) => { out += String(d); });
+  await wait(6000);
+  check('CLI continua rodando sem worker', !dead(child), dead(child) ? `exitCode=${child.exitCode} signal=${child.signalCode}` : 'vivo');
+  check('nenhum worker foi spawnado', /Worker\s+:\s+disabled/.test(out));
+  check('API responde em localhost', (await getStatus(4187, '/api/health')) === 200);
+  child.kill();
+  await wait(800);
+  fs.rmSync(tmp, { recursive: true, force: true });
+}
+
 console.log(`\nResultado: ${passed} passaram, ${failed} falharam.`);
 process.exit(failed ? 1 : 0);

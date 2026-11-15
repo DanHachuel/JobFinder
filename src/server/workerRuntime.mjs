@@ -23,23 +23,40 @@ export const WORKER_ENTRY = path.join(__dirname, 'worker.mjs');
 export const CREATE_NEW_PROCESS_GROUP = 0x00000200;
 
 /**
- * Spawn the worker as a detached-enough child of the caller.
+ * Spawn a long-lived child that the caller supervises (server or worker).
+ *
+ * windows-runtime-guard: NEVER `stdio: 'inherit'` — a child that writes
+ * straight to the terminal dies with EPIPE when the terminal/pipe breaks
+ * (MobaXterm, redirection, closed SSH session). Piped stdio keeps the child
+ * independent from the terminal: the supervisor forwards the output and its
+ * own EPIPE handlers absorb a dead pipe.
+ *
+ * @param {string} entry absolute path of the child entrypoint
  * @param {{ env?: object, cwd?: string }} [options]
  * @returns {import('node:child_process').ChildProcess}
  */
-export function spawnWorker(options = {}) {
-  const child = spawn(process.execPath, [WORKER_ENTRY], {
+export function spawnSupervised(entry, options = {}) {
+  return spawn(process.execPath, [entry], {
     cwd: options.cwd ?? path.resolve(__dirname, '..', '..'),
     env: { ...process.env, ...(options.env ?? {}) },
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true,
     creationFlags: process.platform === 'win32' ? CREATE_NEW_PROCESS_GROUP : 0,
   });
-  return child;
+}
+
+/**
+ * Spawn the worker as a detached-enough child of the caller.
+ * @param {{ env?: object, cwd?: string }} [options]
+ * @returns {import('node:child_process').ChildProcess}
+ */
+export function spawnWorker(options = {}) {
+  return spawnSupervised(WORKER_ENTRY, options);
 }
 
 /** Pipe a child's output to the console with a prefix (never inherit). */
 export function forwardChildOutput(child, prefix, { onLine } = {}) {
+  const label = prefix ? `${prefix} ` : '';
   const emit = (stream) => (chunk) => {
     const text = String(chunk);
     if (onLine) {
@@ -47,7 +64,7 @@ export function forwardChildOutput(child, prefix, { onLine } = {}) {
         if (line.trim()) onLine(line);
       }
     } else {
-      process.stdout.write(`${prefix} ${text}`);
+      process.stdout.write(`${label}${text}`);
     }
     void stream;
   };

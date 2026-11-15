@@ -6,6 +6,16 @@ All notable changes to JobFinder are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.08] — 2026-11-15
+
+### Fixed
+
+- **Encerramento prematuro do CLI após a introdução do Background Worker** (regressão da 0.1.7): o launcher delegava 100% da sua sobrevivência aos handles dos processos filhos — com o event loop vazio, o Node saía com código 0 **em silêncio**, logo após o banner de startup, e o terminal voltava ao prompt. Causas combinadas: (1) nenhum keep-alive próprio no `cli.mjs`; (2) o servidor era spawnado com `stdio: 'inherit'` (proibido pela `windows-runtime-guard` — um terminal quebrado, ex. MobaXterm, o matava com EPIPE); (3) o guardião de órfãos do worker tratava **qualquer** erro ≠ EPERM do `process.kill(ppid, 0)` como "pai morreu", podendo se suicidar por falso-positivo no Windows. Agora: o `cli.mjs` tem um keep-alive referenciado (timer de 60 s, independente de qualquer filho); o servidor é spawnado via `spawnSupervised` com `stdio: ['ignore','pipe','pipe']` + `windowsHide` + `CREATE_NEW_PROCESS_GROUP`, com a saída encaminhada pelo launcher (o servidor não escreve mais direto no terminal); o guardião só considera o pai morto em **ESRCH** (pid inexistente); e o launcher passou a registrar `[jobfinder] launcher exiting with code N` para que nenhuma morte futura fique sem explicação.
+
+### Added
+
+- Regressão `startup-keepalive.mjs` cobre o worker: sobe o app pelo launcher, confirma pid/heartbeat em `worker-state.json`, **mata o worker e o CLI continua vivo servindo HTTP 200** (só loga `worker exited`), e valida o modo `JOBFINDER_NO_WORKER=1`. Suíte: 21 keepalive + 39 fase2-worker + 32 auth + 16 serviços + 22 E2E.
+
 ## [0.1.07] — 2026-11-14
 
 ### Added

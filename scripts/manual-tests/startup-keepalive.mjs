@@ -10,6 +10,10 @@
  *   4. SIGTERM encerra de forma limpa — verificado emitindo o sinal dentro
  *      do próprio processo (no Windows, child.kill() sempre vira
  *      TerminateProcess e os handlers graceful nunca rodam)
+ *   5. worker: sobe com o app, o CLI sobrevive ao crash dele (e o
+ *      reinicia), modo JOBFINDER_NO_WORKER=1
+ *   6. worker direto: rejection injetada -> worker-error.log em disco e o
+ *      processo continua vivo; pipes quebrados (EPIPE) não o derrubam
  *
  * Uso: node scripts/manual-tests/startup-keepalive.mjs
  */
@@ -19,6 +23,8 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
+
+import { ensureDataDir } from '../../src/server/storage/bootstrap.mjs';
 
 const ROOT = process.cwd();
 let passed = 0;
@@ -190,7 +196,7 @@ async function bootAndObserve(label, { args, port, observeMs, env = {} }) {
   const pid1 = await workerPid();
   check('worker continua vivo apos os heartbeats (sem falso positivo do guardiao)', pid1 === pid0 && (await getStatus(4185, '/api/health')) === 200, `pid=${pid1}`);
 
-  // CRASH do worker: o CLI NAO pode morrer — so logar.
+  // CRASH do worker: o CLI NAO pode morrer — so logar (e reiniciar o worker).
   try {
     process.kill(Number(pid1), 'SIGTERM');
   } catch {
@@ -198,9 +204,77 @@ async function bootAndObserve(label, { args, port, observeMs, env = {} }) {
   }
   await wait(2500);
   check('CLI sobrevive ao crash do worker', !dead(child), dead(child) ? `exitCode=${child.exitCode} signal=${child.signalCode}` : 'vivo');
-  check('SAIBA do worker foi registrada no log', /worker exited/i.test(out), out.split('\n').filter((l) => /worker exited/i.test(l))[0] ?? '');
+  check('saida do worker foi registrada no log', /worker encerrou/i.test(out), out.split('\n').filter((l) => /worker encerrou/i.test(l))[0] ?? '');
   check('servidor continua respondendo apos o crash do worker', (await getStatus(4185, '/api/health')) === 200);
+
+  // O launcher supervisiona: um worker novo assume a fila.
+  await wait(5000);
+  const pid2 = await workerPid();
+  check('launcher reiniciou o worker automaticamente', pid2 !== null && pid2 !== pid1, `antes=${pid1} depois=${pid2}`);
+  check('restart anunciado no log', /reiniciando o worker/i.test(out), out.split('\n').filter((l) => /reiniciando o worker/i.test(l))[0] ?? '');
+  check('CLI continua vivo depois do restart', !dead(child) && (await getStatus(4185, '/api/health')) === 200);
   child.kill();
+  await wait(800);
+  fs.rmSync(tmp, { recursive: true, force: true });
+}
+
+// 7) worker direto: rejection injetada -> worker-error.log + processo vivo
+{
+  console.log('\n== worker direto: rejection injetada e log em arquivo ==');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jobfinder-keepalive-wrej-'));
+  const home = path.join(tmp, 'data');
+  ensureDataDir(home); // o worker exige o skeleton (como o launcher faz)
+  const fault = path.join(tmp, 'fault.cjs');
+  fs.writeFileSync(fault, "setTimeout(() => { Promise.reject(new Error('fault-injection: worker rejection')); }, 1200);\n");
+  const worker = spawn(process.execPath, [path.join(ROOT, 'src', 'server', 'worker.mjs')], {
+    cwd: ROOT,
+    env: { ...process.env, JOBFINDER_DATA_DIR: home, JOBFINDER_NO_OPEN: '1', JOBFINDER_WORKER_INTERVAL: '4000', NODE_OPTIONS: `--require ${fault}` },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let out = '';
+  worker.stdout.on('data', (d) => { out += String(d); });
+  worker.stderr.on('data', (d) => { out += String(d); });
+  await wait(8000);
+  check('worker sobrevive a rejection (nao morre silencioso)', !dead(worker), dead(worker) ? `exitCode=${worker.exitCode} signal=${worker.signalCode}` : 'vivo');
+  let errorLog = '';
+  try {
+    errorLog = fs.readFileSync(path.join(home, 'worker-error.log'), 'utf8');
+  } catch {
+    /* arquivo pode nao existir */
+  }
+  check('worker-error.log registrou a falha', /fault-injection: worker rejection/.test(errorLog), errorLog.split('\n')[0]?.slice(0, 100) ?? 'vazio');
+  check('falha tambem apareceu no console', /unhandled promise rejection ignored/i.test(out));
+  worker.kill();
+  await wait(800);
+  fs.rmSync(tmp, { recursive: true, force: true });
+}
+
+// 8) worker direto: stdout/stderr quebrados (EPIPE) -> worker segue vivo
+{
+  console.log('\n== worker direto: EPIPE nos pipes ==');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jobfinder-keepalive-wepipe-'));
+  const home = path.join(tmp, 'data');
+  ensureDataDir(home); // o worker exige o skeleton (como o launcher faz)
+  const worker = spawn(process.execPath, [path.join(ROOT, 'src', 'server', 'worker.mjs')], {
+    cwd: ROOT,
+    env: { ...process.env, JOBFINDER_DATA_DIR: home, JOBFINDER_NO_OPEN: '1', JOBFINDER_WORKER_INTERVAL: '4000' },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  worker.stdout.on('data', () => {});
+  worker.stderr.on('data', () => {});
+  await wait(3000);
+  worker.stdout.destroy();
+  worker.stderr.destroy();
+  await wait(6000);
+  check('worker sobrevive ao EPIPE', !dead(worker), dead(worker) ? `exitCode=${worker.exitCode} signal=${worker.signalCode}` : 'vivo');
+  let state = null;
+  try {
+    state = JSON.parse(fs.readFileSync(path.join(home, 'worker-state.json'), 'utf8'));
+  } catch {
+    /* arquivo pode nao existir */
+  }
+  check('heartbeat continua sendo publicado sem o console', Boolean(state?.pid) && state.pid === worker.pid, `pid=${state?.pid}`);
+  worker.kill();
   await wait(800);
   fs.rmSync(tmp, { recursive: true, force: true });
 }

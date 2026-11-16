@@ -6,6 +6,24 @@ All notable changes to JobFinder are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.11] — 2026-11-16
+
+### Fixed
+
+- **Crash do Worker (exit `4294967295` / `0xFFFFFFFF`) não encerra mais o processo principal** (Windows/MobaXterm): o launcher passou a **supervisionar** o worker — a saída dele só é registrada (`[jobfinder] worker encerrou (code/signal). O servidor web continua rodando.`) e, com o servidor no ar, um worker novo é iniciado automaticamente (até 5 tentativas, 3 s de intervalo; nunca durante o shutdown — sem órfãos). `process.exit` não é chamado nesse caminho.
+- **Worker não morre mais por falha de I/O no console**: escritas em `stdout`/`stderr` passaram por um helper à prova de throw (`safeWrite`); `unhandledRejection` é registrado e o processo **continua rodando** (antes um EPIPE/escrita quebrada no MobaXterm podia derrubar o worker); `uncaughtException` registra e sai(1) — com o launcher reiniciando o worker.
+- **`worker-error.log`**: falhas inesperadas do worker (rejection, exceção, erro de stdio) agora são gravadas em `<dataDir>/worker-error.log` — o único artefato que sobrevive a um pipe morto, permitindo diagnosticar o crash no terminal hostil.
+- **Heartbeat fresca de pid morto não bloqueia mais um worker novo**: `anotherWorkerOwnsState()` confirma que o pid dono do estado está vivo (`process.kill(pid, 0)`). Sem isso, um worker morto por kill externo (que no Windows pula o handler de exit) deixava a heartbeat "fresca" e o restart seria recusado como duplicado.
+- **Loop do worker à prova de fuga**: os callbacks dos timers (tick e heartbeat) estão envoltos em try/catch — uma falha síncrona é reportada e o loop é re-agendado, nunca abandonado.
+
+### Changed
+
+- Mensagem de encerramento do worker no launcher agora é em português e explícita sobre a continuidade do servidor.
+
+### Tests
+
+- `startup-keepalive.mjs` cobre o worker de ponta a ponta: crash do worker com o CLI vivo + **restart automático** (pid novo assumindo a fila), `worker-error.log` com rejection injetada, worker sobrevivendo a EPIPE com heartbeat no disco. Suíte: 29 keepalive + 39 fase2-worker + 32 auth + 16 serviços + 22 E2E.
+
 ## [0.1.10] — 2026-11-15
 
 ### Documentation

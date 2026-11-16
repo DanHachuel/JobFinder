@@ -209,17 +209,44 @@ async function commandStart({ port, host, dataDir, dryRun }) {
 
   // Background worker: a SEPARATE process so the automation queues keep
   // running when the browser is closed (or was never opened). Spawn follows
-  // windows-runtime-guard: windowsHide + new process group + piped stdio
-  // (never 'inherit'). Disable with JOBFINDER_NO_WORKER=1.
+  // runtime-guard: windowsHide + new process group + piped stdio (never
+  // 'inherit'). Disable with JOBFINDER_NO_WORKER=1.
   let worker = null;
-  if (process.env.JOBFINDER_NO_WORKER === '1') {
-    console.log(' Worker         : disabled (JOBFINDER_NO_WORKER=1)');
-  } else {
+  let workerRestarts = 0;
+  let stopping = false;
+
+  /**
+   * Supervise the worker.
+   *
+   * THE LAUNCHER NEVER DIES BECAUSE OF THE WORKER. An exit here only logs
+   * (the server keeps serving) and, while the server is still up, starts a
+   * fresh worker so the automation queues never stop silently. process.exit
+   * is NEVER called on this path.
+   */
+  const startWorker = () => {
     worker = spawnWorker({ env: { JOBFINDER_DATA_DIR: resolved } });
     forwardChildOutput(worker, '[worker]');
     worker.on('exit', (code, signal) => {
-      console.error(`\n[jobfinder] worker exited (${signal ? `signal ${signal}` : `code ${code}`}).`);
+      const reason = signal ? `signal ${signal}` : `code ${code}`;
+      console.error(`\n[jobfinder] worker encerrou (${reason}). O servidor web continua rodando.`);
+      const serverAlive = child.exitCode === null && child.signalCode === null;
+      if (!stopping && serverAlive && workerRestarts < 5) {
+        workerRestarts += 1;
+        console.error(`[jobfinder] reiniciando o worker (tentativa ${workerRestarts}/5)...`);
+        // Re-check `stopping`: a shutdown that starts while this timer is
+        // pending must never leave an orphan behind.
+        setTimeout(() => {
+          if (!stopping) startWorker();
+        }, 3000);
+      }
     });
+    return worker;
+  };
+
+  if (process.env.JOBFINDER_NO_WORKER === '1') {
+    console.log(' Worker         : disabled (JOBFINDER_NO_WORKER=1)');
+  } else {
+    startWorker();
     console.log(` Worker         : automação em segundo plano (pid ${worker.pid})`);
   }
 
@@ -240,7 +267,6 @@ async function commandStart({ port, host, dataDir, dryRun }) {
     console.error(`[jobfinder] launcher exiting with code ${code}.`);
   });
 
-  let stopping = false;
   const stopChildren = () => {
     if (worker && worker.exitCode === null && worker.signalCode === null) {
       worker.kill('SIGTERM');

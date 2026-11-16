@@ -22,9 +22,10 @@
  * Rules honoured here (see .agents/skills/): only atomic JSON writes through
  * the store, dry-run re-checked on every pass against the live config, spawn
  * flags and stdio handled by the launcher, and no unhandled error can kill
- * this process silently (windows-runtime-guard).
+ * this process silently (runtime-guard).
  */
 import fs from 'node:fs';
+import path from 'node:path';
 import process from 'node:process';
 
 import { createContext } from './context.mjs';
@@ -44,26 +45,66 @@ const INTERVAL_MS = Math.max(2_000, Number(process.env.JOBFINDER_WORKER_INTERVAL
 const HEARTBEAT_MS = Math.min(5_000, INTERVAL_MS);
 
 /* ------------------------------------------------------------------ *
- * Process resilience (windows-runtime-guard): never die silently      *
+ * Process resilience (runtime-guard): never die silently              *
  * ------------------------------------------------------------------ */
 let logger = null;
+let errorLogPath = null;
+
+/**
+ * Write that cannot kill the process: a broken stdout/stderr (EPIPE on
+ * Windows terminals, MobaXterm, redirection) must never take the worker
+ * down — the automation queues would stop for a console line.
+ */
+function safeWrite(stream, text) {
+  try {
+    stream?.write?.(text);
+  } catch {
+    /* the pipe is gone: the file log keeps the evidence */
+  }
+}
+
+/**
+ * Append one line to <dataDir>/worker-error.log (best-effort, sync).
+ * This file is the ONLY artifact that survives a dead pipe: when the
+ * process dies on a hostile terminal, the console output is gone but the
+ * crash reason stays on disk for diagnosis.
+ */
+function appendErrorLog(line) {
+  if (!errorLogPath) return;
+  try {
+    fs.appendFileSync(errorLogPath, `${new Date().toISOString()} ${line}\n`, 'utf8');
+  } catch {
+    /* the data dir may be read-only: the console mirror still has the line */
+  }
+}
+
+/** Report an unexpected failure: file log + logger + safe console mirror. */
+function reportUnexpected(scope, reason) {
+  const message = reason instanceof Error ? reason.message : String(reason);
+  const stack = reason instanceof Error ? reason.stack : undefined;
+  appendErrorLog(`${scope}: ${message}${stack ? `\n${stack}` : ''}`);
+  logger?.error('worker', scope, { message, stack });
+  safeWrite(process.stderr, `[jobfinder:worker] ${scope}: ${message}\n`);
+}
 
 process.on('unhandledRejection', (reason) => {
-  const message = reason instanceof Error ? reason.message : String(reason);
-  logger?.error('worker', 'unhandled promise rejection ignored', { message });
-  console.error(`[jobfinder:worker] unhandled promise rejection ignored: ${message}`);
+  // Keep running: the worker owns the automation queues and must survive a
+  // stray async failure instead of exiting silently.
+  reportUnexpected('unhandled promise rejection ignored', reason);
 });
 
 process.on('uncaughtException', (err) => {
-  logger?.error('worker', 'uncaught exception - shutting down', { message: err?.message });
-  console.error('[jobfinder:worker] uncaught exception:', err);
+  // An uncaught exception leaves the state undefined: record it, then exit(1)
+  // — the launcher supervises the worker and starts a fresh one.
+  reportUnexpected('uncaught exception - exiting', err);
   process.exit(1);
 });
 
 for (const stream of [process.stdout, process.stderr]) {
   stream?.on?.('error', (err) => {
     if (err?.code === 'EPIPE') return; // terminal/pipe closed: keep working
-    console.error(`[jobfinder:worker] stdio error: ${err?.code ?? ''} ${err?.message ?? err}`);
+    appendErrorLog(`stdio error: ${err?.code ?? ''} ${err?.message ?? err}`);
+    safeWrite(process.stderr, `[jobfinder:worker] stdio error: ${err?.code ?? ''} ${err?.message ?? err}\n`);
   });
 }
 
@@ -108,12 +149,25 @@ async function writeLog(level, message, data) {
   await patchState({ logs: appendLog(readWorkerState(store).logs, entry) });
 }
 
-/** Is another live worker already holding the state file? */
+/**
+ * Is another live worker already holding the state file?
+ *
+ * A fresh heartbeat from a DEAD pid is not ownership: on Windows a hard
+ * kill (TerminateProcess, exit 0xFFFFFFFF) skips the worker's exit handler,
+ * so the heartbeat stays fresh for a few seconds after the process is gone.
+ * Without the pid check, a crash-restart would be rejected as a duplicate.
+ */
 function anotherWorkerOwnsState() {
   const state = readWorkerState(store);
   if (!state.pid || state.pid === process.pid || !state.heartbeatAt) return false;
   const age = Date.now() - new Date(state.heartbeatAt).getTime();
-  return age >= 0 && age < 12_000;
+  if (!(age >= 0 && age < 12_000)) return false;
+  try {
+    process.kill(state.pid, 0);
+    return true; // heartbeat fresh AND the pid is alive: someone owns it
+  } catch (err) {
+    return err?.code !== 'ESRCH'; // dead pid -> not an owner
+  }
 }
 
 function beatHeartbeat() {
@@ -292,7 +346,8 @@ function stop(reason) {
   } catch {
     /* state is best-effort during shutdown */
   }
-  console.error(`[jobfinder:worker] stopped (${reason}).`);
+  appendErrorLog(`stopped (${reason})`);
+  safeWrite(process.stderr, `[jobfinder:worker] stopped (${reason}).\n`);
   process.exit(0);
 }
 
@@ -305,18 +360,27 @@ function schedule() {
   if (stopping) return;
   beatHeartbeat();
   timer = setTimeout(async () => {
-    if (parentIsGone()) {
-      stop('parent launcher exited');
-      return;
+    // A synchronous failure in this callback must never escape as an
+    // uncaughtException: report it and reschedule instead of dying.
+    try {
+      if (parentIsGone()) {
+        stop('parent launcher exited');
+        return;
+      }
+      await tick().catch((err) => reportUnexpected('tick failed', err));
+      schedule();
+    } catch (err) {
+      reportUnexpected('loop failed', err);
+      if (!stopping) schedule();
     }
-    await tick().catch((err) => {
-      logger?.error('worker', 'tick failed', { message: err?.message });
-    });
-    schedule();
   }, INTERVAL_MS);
   heartbeatTimer = setInterval(() => {
-    beatHeartbeat();
-    if (parentIsGone()) stop('parent launcher exited');
+    try {
+      beatHeartbeat();
+      if (parentIsGone()) stop('parent launcher exited');
+    } catch (err) {
+      reportUnexpected('heartbeat failed', err);
+    }
   }, HEARTBEAT_MS);
 }
 
@@ -326,6 +390,8 @@ async function main() {
     console.error(`[jobfinder:worker] data directory not found: ${dataDir}`);
     process.exit(1);
   }
+  // Crash/forensic log: the only artifact that survives a dead pipe.
+  errorLogPath = path.join(dataDir, 'worker-error.log');
 
   context = createContext(dataDir);
   store = context.store;

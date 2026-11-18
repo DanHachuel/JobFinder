@@ -127,11 +127,18 @@ function nowIso() {
  * Used for every normal-path write.
  */
 async function patchState(patch) {
-  return store.update(
-    STATE_FILE,
-    (current) => ({ ...defaultWorkerState(), ...(current ?? {}), ...patch }),
-    {}
-  );
+  try {
+    return await store.update(
+      STATE_FILE,
+      (current) => ({ ...defaultWorkerState(), ...(current ?? {}), ...patch }),
+      {}
+    );
+  } catch (err) {
+    // A locked state file (Windows EPERM/EACCES) must never kill the worker:
+    // record it and let the next tick/heartbeat try again.
+    reportUnexpected('worker-state write failed', err);
+    return null;
+  }
 }
 
 /**
@@ -139,8 +146,13 @@ async function patchState(patch) {
  * handlers, where awaiting is not possible.
  */
 function patchStateSync(patch) {
-  const current = store.read(STATE_FILE, {}) ?? {};
-  return store.write(STATE_FILE, { ...defaultWorkerState(), ...current, ...patch });
+  try {
+    const current = store.read(STATE_FILE, {}) ?? {};
+    return store.write(STATE_FILE, { ...defaultWorkerState(), ...current, ...patch });
+  } catch (err) {
+    reportUnexpected('worker-state write failed (sync)', err);
+    return null;
+  }
 }
 
 /** Append an action line and persist it. */
@@ -156,8 +168,16 @@ async function writeLog(level, message, data) {
  * kill (TerminateProcess, exit 0xFFFFFFFF) skips the worker's exit handler,
  * so the heartbeat stays fresh for a few seconds after the process is gone.
  * Without the pid check, a crash-restart would be rejected as a duplicate.
+ *
+ * JOBFINDER_TAKEOVER=1 is set by a SUPERVISOR that is spawning us after
+ * having observed the previous lifecycle end (the launcher's restart path,
+ * or its own boot): the supervisor owns the lifecycle — when it dies, its
+ * workers die with it (stdin EOF) — so a stale heartbeat must never block
+ * its spawn. This is what makes an automatic restart deterministic even
+ * when Windows recycled the dead worker's pid.
  */
 function anotherWorkerOwnsState() {
+  if (process.env.JOBFINDER_TAKEOVER === '1') return false;
   const state = readWorkerState(store);
   if (!state.pid || state.pid === process.pid || !state.heartbeatAt) return false;
   const age = Date.now() - new Date(state.heartbeatAt).getTime();
@@ -392,6 +412,26 @@ async function main() {
   }
   // Crash/forensic log: the only artifact that survives a dead pipe.
   errorLogPath = path.join(dataDir, 'worker-error.log');
+
+  // Orphan detection by PIPE (primary). The supervisor keeps our stdin pipe
+  // open for as long as it lives; when it dies (any reason, hard kill
+  // included) the pipe closes and stdin reaches EOF — immediately and
+  // without depending on pids, which Windows recycles. `parentIsGone()`
+  // stays as the heartbeat backstop.
+  //
+  // Armed ONLY when the supervisor said so (JOBFINDER_SUPERVISED_STDIN):
+  // a manual run's fd 0 may be the NUL device, which EOFs instantly.
+  if (process.env.JOBFINDER_SUPERVISED_STDIN === '1') {
+    try {
+      process.stdin?.resume?.();
+      process.stdin?.on?.('end', () => stop('parent launcher closed the pipe (EOF)'));
+      process.stdin?.on?.('error', (err) => {
+        if (err?.code !== 'EPIPE') appendErrorLog(`stdin error: ${err?.code ?? ''} ${err?.message ?? err}`);
+      });
+    } catch {
+      /* no pipe to watch: the heartbeat backstop still applies */
+    }
+  }
 
   context = createContext(dataDir);
   store = context.store;

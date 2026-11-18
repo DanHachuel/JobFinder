@@ -127,7 +127,9 @@ export async function start() {
     } else {
       console.log('REAL MODE: live LinkedIn actions are enabled (dry-run is OFF).');
     }
-    console.log(`Login: ${auth.getUser().email}${auth.usingDefaultPassword() ? ' / 123456 (troque a senha em Configurações)' : ''}`);
+    // Credentials are NEVER printed to the terminal (security): the local
+    // account is managed in the UI (Configurações → Segurança). A dangling
+    // `Login:` line here leaked the default e-mail/password to every console.
   });
 
   // Pin the server handle: the listening socket keeps the event loop (and

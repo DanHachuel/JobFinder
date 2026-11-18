@@ -224,7 +224,10 @@ async function commandStart({ port, host, dataDir, dryRun }) {
    * is NEVER called on this path.
    */
   const startWorker = () => {
-    worker = spawnWorker({ env: { JOBFINDER_DATA_DIR: resolved } });
+    // JOBFINDER_TAKEOVER: the launcher either just booted (any previous
+    // worker's supervisor is gone by definition) or observed the previous
+    // worker exit — a stale heartbeat must never block this spawn.
+    worker = spawnWorker({ env: { JOBFINDER_DATA_DIR: resolved, JOBFINDER_TAKEOVER: '1' } });
     forwardChildOutput(worker, '[worker]');
     worker.on('exit', (code, signal) => {
       const reason = signal ? `signal ${signal}` : `code ${code}`;

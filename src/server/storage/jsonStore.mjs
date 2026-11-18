@@ -10,6 +10,60 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 
+/** Synchronous sleep — the only dependency-free one in Node. */
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+/**
+ * Atomic replace with Windows patience.
+ *
+ * On Windows, `rename` over a file that ANY process still holds open —
+ * antivirus scanning the data dir, an editor, another node process that
+ * opened it without FILE_SHARE_DELETE — fails with EPERM/EACCES/EBUSY.
+ * The rename is the LAST step of every atomic write, so the write retries
+ * with backoff (5 × 50 ms) and, if the destination is still locked, drops
+ * it first: Windows allows deleting a locked file far more often than
+ * renaming over it.
+ *
+ * @param {string} tmp temp file holding the new content
+ * @param {string} file destination
+ * @throws the OS error when every attempt failed (callers decide how bad
+ *         that is — a heartbeat failure must never kill a process)
+ */
+function renameAtomic(tmp, file) {
+  const RETRY_DELAY_MS = 50;
+  const MAX_ATTEMPTS = 5;
+  let lastErr = null;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    try {
+      fs.renameSync(tmp, file);
+      return;
+    } catch (err) {
+      const code = err?.code;
+      if (code !== 'EPERM' && code !== 'EACCES' && code !== 'EBUSY') throw err;
+      lastErr = err;
+      if (attempt < MAX_ATTEMPTS) sleepSync(RETRY_DELAY_MS);
+    }
+  }
+  // Fallback: remove the locked destination (best-effort) and rename once more.
+  try {
+    fs.unlinkSync(file);
+  } catch {
+    /* the rename below may still succeed: only it can report failure */
+  }
+  try {
+    fs.renameSync(tmp, file);
+  } catch (err) {
+    try {
+      fs.unlinkSync(tmp); // never leave the .tmp behind
+    } catch {
+      /* best effort */
+    }
+    throw err ?? lastErr;
+  }
+}
+
 export function newId(prefix) {
   return `${prefix}_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
 }
@@ -71,7 +125,7 @@ export class JsonStore {
     const tmp = `${file}.tmp.${process.pid}`;
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(tmp, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
-    fs.renameSync(tmp, file);
+    renameAtomic(tmp, file);
     this.cache.set(name, data);
     return data;
   }

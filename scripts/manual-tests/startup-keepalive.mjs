@@ -13,7 +13,8 @@
  *   5. worker: sobe com o app, o CLI sobrevive ao crash dele (e o
  *      reinicia), modo JOBFINDER_NO_WORKER=1
  *   6. worker direto: rejection injetada -> worker-error.log em disco e o
- *      processo continua vivo; pipes quebrados (EPIPE) não o derrubam
+ *      processo continua vivo; pipes quebrados (EPIPE) não o derrubam;
+ *      rename sempre EPERM (arquivo travado no Windows) não o derruba
  *
  * Uso: node scripts/manual-tests/startup-keepalive.mjs
  */
@@ -274,6 +275,51 @@ async function bootAndObserve(label, { args, port, observeMs, env = {} }) {
     /* arquivo pode nao existir */
   }
   check('heartbeat continua sendo publicado sem o console', Boolean(state?.pid) && state.pid === worker.pid, `pid=${state?.pid}`);
+  worker.kill();
+  await wait(800);
+  fs.rmSync(tmp, { recursive: true, force: true });
+}
+
+// 9) worker direto: rename SEMPRE EPERM (antivirus/arquivo travado no
+//    Windows) -> o worker NAO morre; o erro vai para worker-error.log e a
+//    escrita é tentada de novo no próximo tick/heartbeat.
+{
+  console.log('\n== worker direto: EPERM no rename (arquivo travado) ==');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jobfinder-keepalive-wperm-'));
+  const home = path.join(tmp, 'data');
+  ensureDataDir(home);
+  const sabotage = path.join(tmp, 'eperm.cjs');
+  fs.writeFileSync(
+    sabotage,
+    `const fs = require('node:fs');\n` +
+    `const real = fs.renameSync.bind(fs);\n` +
+    `fs.renameSync = (from, to) => {\n` +
+    `  if (String(to).endsWith('worker-state.json')) {\n` +
+    `    const err = new Error('EPERM: operation not permitted, rename');\n` +
+    `    err.code = 'EPERM';\n` +
+    `    throw err;\n` +
+    `  }\n` +
+    `  return real(from, to);\n` +
+    `};\n`
+  );
+  const worker = spawn(process.execPath, [path.join(ROOT, 'src', 'server', 'worker.mjs')], {
+    cwd: ROOT,
+    env: { ...process.env, JOBFINDER_DATA_DIR: home, JOBFINDER_NO_OPEN: '1', JOBFINDER_WORKER_INTERVAL: '4000', NODE_OPTIONS: `--require ${sabotage}` },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let out = '';
+  worker.stdout.on('data', (d) => { out += String(d); });
+  worker.stderr.on('data', (d) => { out += String(d); });
+  await wait(9000);
+  check('worker sobrevive ao EPERM no rename', !dead(worker), dead(worker) ? `exitCode=${worker.exitCode} signal=${worker.signalCode}` : 'vivo');
+  let errorLog = '';
+  try {
+    errorLog = fs.readFileSync(path.join(home, 'worker-error.log'), 'utf8');
+  } catch {
+    /* arquivo pode nao existir */
+  }
+  check('EPERM registrado em worker-error.log', /EPERM/.test(errorLog), errorLog.split('\n')[0]?.slice(0, 100) ?? 'vazio');
+  check('worker-state write failed registrado (não engolido em silêncio)', /worker-state write failed/i.test(errorLog));
   worker.kill();
   await wait(800);
   fs.rmSync(tmp, { recursive: true, force: true });

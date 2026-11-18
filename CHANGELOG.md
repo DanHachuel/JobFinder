@@ -6,6 +6,24 @@ All notable changes to JobFinder are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.12] — 2026-11-18
+
+### Security
+
+- **Remoção definitiva da senha no terminal**: a linha `Login: <email> / <senha>` foi **deletada** do startup do servidor — o terminal não exibe mais e-mail nem senha (a dica de "troque a senha padrão" continua apenas na UI, em Configurações → Segurança). Verificado em boot real: stdout/stderr sem `123456`, sem e-mail e sem `Login:`.
+
+### Fixed
+
+- **`EPERM` no `rename` atômico (Windows)**: `JsonStore.write` agora usa `renameAtomic` — em `EPERM`/`EACCES`/`EBUSY` (antivírus, editor ou outro processo segurando o destino) o rename é retentado com backoff (5 × 50 ms) e, se ainda falhar, o destino é removido antes da última tentativa (`unlink` + `rename`); falha definitiva limpa o `.tmp` e propaga o erro. Nenhum `.tmp` órfão em nenhum caminho.
+- **Worker não morre por falha de escrita de estado**: `patchState`/`patchStateSync` envolvem a escrita em try/catch — `EPERM` (ou qualquer erro de I/O) VAI para `worker-error.log` + log + console e a escrita é tentada de novo no próximo tick/heartbeat; `process.exit` não é chamado.
+- **Restart do worker determinístico (fim do falso "outro worker dono")**: (1) detecção de órfão por **pipe** — o supervisor mantém o stdin do worker aberto; quando ele morre (inclusive kill externo), o worker vê EOF e se encerra na hora, sem depender de `ppid` (que o Windows recicla); (2) o launcher passa `JOBFINDER_TAKEOVER=1` em seus spawns — no boot e no restart, uma heartbeat velha de pid reciclado nunca mais bloqueia o worker novo.
+- **Loop do worker à prova de fuga síncrona**: callbacks dos timers (tick e heartbeat) em try/catch, com re-agendamento.
+
+### Tests
+
+- `tests/test_atomic_write_concurrency.js` (stub → real, node:test): 40 updates concorrentes sem perder registro, mutator que lança preserva o arquivo anterior, `.tmp` restante não quebra o store, **rename travado com EPERM retentado até dar certo** e **EPERM permanente falhando alto sem .tmp órfão**.
+- `startup-keepalive.mjs`: novo cenário **worker direto com rename sabotado (EPERM permanente)** — sobrevive, registra em `worker-error.log`. Suíte: 32 keepalive + 39 fase2-worker + 32 auth + 16 serviços + 22 E2E.
+
 ## [0.1.11] — 2026-11-16
 
 ### Fixed

@@ -130,7 +130,7 @@ session per repository, surgical scope (no unrequested refactors), atomic JSON w
 the store, Windows runtime resilience, contract tests that exercise real behavior, and
 predictable React state.
 
-Layout: `scripts/cli.mjs` (launcher) · `src/server/` (Express API, JSON store, LinkedIn + LLM services, workers) · `src/ui/` (React + Vite + Tailwind v4) · `.agents/skills/` (regression rules) · `tests/` (contract/concurrency/UI stubs).
+Layout: `scripts/cli.mjs` (launcher — embute o Express via import: o `app.listen()` roda no próprio processo) · `src/server/` (Express API, JSON store, LinkedIn + LLM services, worker autônomo) · `src/ui/` (React + Vite + Tailwind v4) · `.agents/skills/` (regression rules) · `tests/` (contract/concurrency/UI stubs).
 
 ## Publishing
 

@@ -14,7 +14,7 @@ import { Router } from 'express';
 
 import { asyncRoute } from '../middleware/errors.mjs';
 import { runWorkerPass } from '../services/workers.mjs';
-import { spawnWorker, forwardChildOutput } from '../workerRuntime.mjs';
+import { spawnWorker } from '../workerRuntime.mjs';
 import {
   readWorkerControl,
   readWorkerState,
@@ -49,8 +49,9 @@ export function workerRoutes({ store, logger, config, rateLimiter }) {
       let spawned = false;
       if (!alive) {
         try {
+          // stdio ignore: o worker escreve logs em arquivo (worker.log,
+          // worker-error.log), nunca no pipe do servidor.
           const child = spawnWorker({ env: { JOBFINDER_DATA_DIR: store.dataDir } });
-          forwardChildOutput(child, '[jobfinder:worker]');
           child.on('exit', (code, signal) => {
             logger.info('worker', 'worker process exited', { reason: signal ? `signal ${signal}` : `code ${code}` });
           });

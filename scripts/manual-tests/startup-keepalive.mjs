@@ -15,6 +15,10 @@
  *   6. worker direto: rejection injetada -> worker-error.log em disco e o
  *      processo continua vivo; pipes quebrados (EPIPE) não o derrubam;
  *      rename sempre EPERM (arquivo travado no Windows) não o derruba
+ *   7. ambiente hostil (arquitetura 0.1.13): servidor Express embutido no
+ *      processo do CLI, stdout/stderr destruídos (queda do MobaXterm) e
+ *      worker morto — o socket do app.listen() mantém tudo vivo e o HTTP
+ *      continua 200, com o worker reiniciado
  *
  * Uso: node scripts/manual-tests/startup-keepalive.mjs
  */
@@ -342,6 +346,58 @@ async function bootAndObserve(label, { args, port, observeMs, env = {} }) {
   check('CLI continua rodando sem worker', !dead(child), dead(child) ? `exitCode=${child.exitCode} signal=${child.signalCode}` : 'vivo');
   check('nenhum worker foi spawnado', /Worker\s+:\s+disabled/.test(out));
   check('API responde em localhost', (await getStatus(4187, '/api/health')) === 200);
+  child.kill();
+  await wait(800);
+  fs.rmSync(tmp, { recursive: true, force: true });
+}
+
+// 10) ARQUITETURA 0.1.13: servidor DENTRO do processo do CLI + ambiente
+//     hostil. Destrói o stdout/stderr do launcher (simulando a queda do
+//     MobaXterm) e mata o worker à força: o socket do app.listen() mantém
+//     o processo vivo e respondendo HTTP 200 — e o worker é reiniciado.
+{
+  console.log('\n== ambiente hostil: stdout destruído + worker morto (servidor embutido) ==');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jobfinder-keepalive-hostil-'));
+  const home = path.join(tmp, 'data');
+  const child = spawn(process.execPath, [path.join(ROOT, 'scripts', 'cli.mjs'), 'start', '--no-open'], {
+    cwd: ROOT,
+    env: { ...process.env, JOBFINDER_PORT: '4190', JOBFINDER_DATA_DIR: home, JOBFINDER_NO_OPEN: '1' },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let out = '';
+  child.stdout.on('data', (d) => { out += String(d); });
+  child.stderr.on('data', (d) => { out += String(d); });
+
+  const workerPid = async () => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(home, 'worker-state.json'), 'utf8')).pid ?? null;
+    } catch {
+      return null;
+    }
+  };
+
+  await wait(5000);
+  const pid0 = await workerPid();
+  check('servidor embutido subiu pelo CLI (HTTP 200 antes do caos)', (await getStatus(4190, '/api/health')) === 200, `worker pid=${pid0}`);
+
+  // Queda do terminal: a ponta de leitura dos pipes do launcher é destruída.
+  child.stdout.destroy();
+  child.stderr.destroy();
+  await wait(1000);
+  check('CLI sobrevive à destruição do stdout/stderr', !dead(child), dead(child) ? `exitCode=${child.exitCode} signal=${child.signalCode}` : 'vivo');
+  check('servidor continua respondendo após o stdout cair', (await getStatus(4190, '/api/health')) === 200);
+
+  // Morte forçada do worker (Task Manager / kill externo).
+  try {
+    process.kill(Number(pid0), 'SIGTERM');
+  } catch {
+    /* processo pode ja ter saido */
+  }
+  await wait(6000);
+  check('CLI sobrevive à morte do worker', !dead(child), dead(child) ? `exitCode=${child.exitCode} signal=${child.signalCode}` : 'vivo');
+  check('servidor continua respondendo após a morte do worker', (await getStatus(4190, '/api/health')) === 200);
+  const pid1 = await workerPid();
+  check('worker foi reiniciado pelo launcher', pid1 !== null && pid1 !== pid0, `antes=${pid0} depois=${pid1}`);
   child.kill();
   await wait(800);
   fs.rmSync(tmp, { recursive: true, force: true });

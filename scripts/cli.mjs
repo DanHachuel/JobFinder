@@ -16,7 +16,6 @@
  *   --open / --no-open open/do not open the browser on start
  *   --dry-run          start with automation in dry-run mode (nothing is really sent)
  */
-import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -24,7 +23,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 import { ensureDataDir, resolveDataDir, isDataDirHealthy } from '../src/server/storage/bootstrap.mjs';
-import { spawnWorker, spawnSupervised, forwardChildOutput } from '../src/server/workerRuntime.mjs';
+import { spawnWorker } from '../src/server/workerRuntime.mjs';
 
 /**
  * Process resilience for the launcher — installed before anything else runs
@@ -32,8 +31,8 @@ import { spawnWorker, spawnSupervised, forwardChildOutput } from '../src/server/
  * explanation):
  *
  *  1. unhandledRejection — since Node 15 any unhandled promise rejection
- *     terminates the process immediately. Log it and keep supervising the
- *     server child instead of dying without a trace.
+ *     terminates the process immediately. Log it instead of dying without
+ *     a trace.
  *  2. EPIPE on stdio — when the shell behind stdout disappears (Windows
  *     terminals, MobaXterm, redirection), the next console.log throws an
  *     unhandled 'error' and kills the launcher.
@@ -56,7 +55,6 @@ for (const stream of [process.stdout, process.stderr]) {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
-const SERVER_ENTRY = path.join(ROOT, 'src', 'server', 'index.mjs');
 const UI_DIST = path.join(ROOT, 'src', 'ui', 'dist');
 
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
@@ -173,24 +171,12 @@ async function commandStart({ port, host, dataDir, dryRun }) {
   const resolved = resolveDataDir(dataDir);
   ensureDataDir(resolved);
 
-  if (!fs.existsSync(SERVER_ENTRY)) {
-    console.error(`[jobfinder] server entry not found at ${SERVER_ENTRY}`);
-    process.exit(1);
-  }
   if (!fs.existsSync(path.join(UI_DIST, 'index.html'))) {
     console.warn(
       '[jobfinder] UI build not found (src/ui/dist). The API will run, but the UI will be blank.\n' +
         '            Build it with:  npm run build   (requires the UI dependencies installed)'
     );
   }
-
-  const env = {
-    ...process.env,
-    JOBFINDER_DATA_DIR: resolved,
-    JOBFINDER_DRY_RUN: dryRun ? '1' : process.env.JOBFINDER_DRY_RUN || '',
-  };
-  if (port) env.JOBFINDER_PORT = String(port);
-  if (host) env.JOBFINDER_HOST = host;
 
   printBanner();
   const listenPort = port || Number(process.env.JOBFINDER_PORT) || 4040;
@@ -201,74 +187,28 @@ async function commandStart({ port, host, dataDir, dryRun }) {
   console.log(` URL            : ${url}`);
   console.log(' Press Ctrl+C to stop.\n');
 
-  // The server is a supervised child: piped stdio (never 'inherit' — a
-  // broken terminal must not kill it), windowsHide + a new process group.
-  // Its output is forwarded below; the CLI relays it to the terminal.
-  const child = spawnSupervised(SERVER_ENTRY, { env, cwd: ROOT });
-  forwardChildOutput(child, '');
+  // ------------------------------------------------------------------ *
+  // ARCHITECTURE (0.1.13): the Express server runs INSIDE this process.
+  //
+  // `start()` imports src/server/index.mjs in-process and app.listen()
+  // opens a real TCP socket on 4040. A listening server socket keeps the
+  // Node event loop open MATHEMATICALLY — nothing about the terminal
+  // (MobaXterm, the npx wrapper, output redirection, closed pipes) can
+  // empty the loop and take the process down anymore. The worker stays a
+  // separate child so its heavy tasks never block the server.
+  // ------------------------------------------------------------------ *
+  process.env.JOBFINDER_DATA_DIR = resolved;
+  process.env.JOBFINDER_PORT = String(listenPort);
+  process.env.JOBFINDER_HOST = listenHost;
+  if (dryRun) process.env.JOBFINDER_DRY_RUN = '1';
 
-  // Background worker: a SEPARATE process so the automation queues keep
-  // running when the browser is closed (or was never opened). Spawn follows
-  // runtime-guard: windowsHide + new process group + piped stdio (never
-  // 'inherit'). Disable with JOBFINDER_NO_WORKER=1.
+  // Supervisão do worker. O CLI NUNCA depende do worker para viver: ele
+  // roda com stdio ['ignore','ignore','ignore'] (logs em arquivo) e, se
+  // morrer, o launcher apenas registra e reinicia — o servidor segue.
   let worker = null;
   let workerRestarts = 0;
   let stopping = false;
-
-  /**
-   * Supervise the worker.
-   *
-   * THE LAUNCHER NEVER DIES BECAUSE OF THE WORKER. An exit here only logs
-   * (the server keeps serving) and, while the server is still up, starts a
-   * fresh worker so the automation queues never stop silently. process.exit
-   * is NEVER called on this path.
-   */
-  const startWorker = () => {
-    // JOBFINDER_TAKEOVER: the launcher either just booted (any previous
-    // worker's supervisor is gone by definition) or observed the previous
-    // worker exit — a stale heartbeat must never block this spawn.
-    worker = spawnWorker({ env: { JOBFINDER_DATA_DIR: resolved, JOBFINDER_TAKEOVER: '1' } });
-    forwardChildOutput(worker, '[worker]');
-    worker.on('exit', (code, signal) => {
-      const reason = signal ? `signal ${signal}` : `code ${code}`;
-      console.error(`\n[jobfinder] worker encerrou (${reason}). O servidor web continua rodando.`);
-      const serverAlive = child.exitCode === null && child.signalCode === null;
-      if (!stopping && serverAlive && workerRestarts < 5) {
-        workerRestarts += 1;
-        console.error(`[jobfinder] reiniciando o worker (tentativa ${workerRestarts}/5)...`);
-        // Re-check `stopping`: a shutdown that starts while this timer is
-        // pending must never leave an orphan behind.
-        setTimeout(() => {
-          if (!stopping) startWorker();
-        }, 3000);
-      }
-    });
-    return worker;
-  };
-
-  if (process.env.JOBFINDER_NO_WORKER === '1') {
-    console.log(' Worker         : disabled (JOBFINDER_NO_WORKER=1)');
-  } else {
-    startWorker();
-    console.log(` Worker         : automação em segundo plano (pid ${worker.pid})`);
-  }
-
-  // The `child` handle keeps this launcher's event loop open for as long as
-  // the server runs: the CLI stays in the foreground and the terminal only
-  // returns to the prompt when the server itself exits (or on Ctrl+C).
-  //
-  // Independent keep-alive: the launcher must NEVER depend on a child handle
-  // to stay alive (regression 0.1.7 — an empty event loop makes Node exit
-  // with code 0, silently, right after the startup banner). This referenced
-  // timer holds the loop open by itself; explicit process.exit() calls in
-  // the signal/exit handlers below still terminate immediately.
-  const keepAlive = setInterval(() => {}, 60_000);
-  void keepAlive;
-
-  // Forensic trail: if the launcher ever dies, the reason is visible.
-  process.on('exit', (code) => {
-    console.error(`[jobfinder] launcher exiting with code ${code}.`);
-  });
+  let serverRef = null;
 
   const stopChildren = () => {
     if (worker && worker.exitCode === null && worker.signalCode === null) {
@@ -279,19 +219,46 @@ async function commandStart({ port, host, dataDir, dryRun }) {
       }, 2000).unref();
     }
   };
+
+  const startWorker = () => {
+    // JOBFINDER_TAKEOVER: o launcher acabou de subir (o supervisor anterior
+    // já se foi) ou observou a saída do worker — heartbeat velha não pode
+    // bloquear este spawn.
+    worker = spawnWorker({ env: { JOBFINDER_DATA_DIR: resolved, JOBFINDER_TAKEOVER: '1' } });
+    worker.on('exit', (code, signal) => {
+      const reason = signal ? `signal ${signal}` : `code ${code}`;
+      console.error(`\n[jobfinder] worker encerrou (${reason}). O servidor web continua rodando.`);
+      const serverAlive = Boolean(serverRef?.listening);
+      if (!stopping && serverAlive && workerRestarts < 5) {
+        workerRestarts += 1;
+        console.error(`[jobfinder] reiniciando o worker (tentativa ${workerRestarts}/5)...`);
+        // Re-check `stopping`: um shutdown que começa enquanto este timer
+        // está pendente nunca pode deixar um órfão para trás.
+        setTimeout(() => {
+          if (!stopping) startWorker();
+        }, 3000);
+      }
+    });
+    return worker;
+  };
+
+  // Keep-alive inquebrável: timer de 24h SEM unref. Segurança extra — o
+  // socket do servidor (abaixo) já é a garantia principal.
+  setInterval(() => {}, 24 * 60 * 60 * 1000);
+
+  // Forensic trail: se o launcher morrer, o motivo fica visível.
+  process.on('exit', (code) => {
+    console.error(`[jobfinder] launcher exiting with code ${code}.`);
+  });
+
+  // Sinais: o primeiro encerra o worker e deixa o shutdown gracioso do
+  // servidor (registrado dentro de start(), abaixo) rodar; o segundo força.
   const forward = (signal) => () => {
-    // A second Ctrl+C must never be ignored: force the exit if the graceful
-    // path is stuck.
     if (stopping) {
       process.exit(1);
     }
     stopping = true;
     stopChildren();
-    if (child.exitCode !== null || child.signalCode !== null) {
-      process.exit(child.exitCode ?? (child.signalCode ? 1 : 0));
-      return;
-    }
-    child.kill(signal);
   };
   process.on('SIGINT', forward('SIGINT'));
   process.on('SIGTERM', forward('SIGTERM'));
@@ -302,14 +269,23 @@ async function commandStart({ port, host, dataDir, dryRun }) {
   // Opening a browser window on the user's machine without being asked
   // is not acceptable for a hosted (SaaS) product.
 
-  child.on('exit', (code, signal) => {
-    // Loud, visible reason: the server ending must never look like a silent
-    // crash back at the prompt.
-    const reason = signal ? `signal ${signal}` : `code ${code}`;
-    console.error(`\n[jobfinder] server exited (${reason}).`);
+  // Sobe o servidor Express NO PRÓPRIO PROCESSO (dinâmico: mantém --help,
+  // --version e install leves, sem carregar o Express).
+  try {
+    const { start } = await import('../src/server/index.mjs');
+    ({ server: serverRef } = await start());
+  } catch (err) {
+    console.error('[jobfinder] falha ao iniciar o servidor:', err?.message ?? err);
     stopChildren();
-    process.exit(code ?? (signal ? 1 : 0));
-  });
+    process.exit(1);
+  }
+
+  if (process.env.JOBFINDER_NO_WORKER === '1') {
+    console.log(' Worker         : disabled (JOBFINDER_NO_WORKER=1)');
+  } else {
+    startWorker();
+    console.log(` Worker         : automação em segundo plano (pid ${worker.pid})`);
+  }
 }
 
 function commandVersion() {

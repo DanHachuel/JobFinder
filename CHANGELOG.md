@@ -6,6 +6,22 @@ All notable changes to JobFinder are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.13] — 2026-11-20
+
+### Changed
+
+- **Arquitetura: servidor Express embutido no processo do CLI (fim do `spawn`)**: `scripts/cli.mjs` agora importa `start()` de `src/server/index.mjs` diretamente e roda o `app.listen()` **no próprio processo**. Um socket de servidor escutando na porta mantém o event loop do Node aberto **matematicamente** — nenhum comportamento de terminal hostil (MobaXterm, wrapper do npx, redirecionamento, pipes fechados) pode mais esvaziá-lo. Esta é a correção definitiva para o encerramento prematuro que perseguia o Windows desde a 0.1.7.
+- **Worker desacoplado e silencioso**: o worker continua sendo processo filho (tarefas pesadas não travam a UI), mas agora com `stdio: ['ignore','ignore','ignore']` — ele **grava seus logs em arquivo** (`worker.log` para o ciclo de vida e `worker-error.log` para falhas). Um terminal que engasga ao ler os pipes do worker não tem mais como perturbá-lo. A detecção de órfão por `stdin` EOF e o `JOBFINDER_TAKEOVER` permanecem.
+- **Sinais**: o CLI encerra o worker no primeiro Ctrl+C e o shutdown gracioso do servidor (mesmo processo) assume a partir daí; o segundo sinal força a saída.
+
+### Fixed
+
+- **Resiliência inquebrável do launcher**: `keep-alive` de 24 h sem `unref()` no `start`, handlers de `unhandledRejection`/`uncaughtException`/EPIPE no topo e o registro `[jobfinder] launcher exiting with code N` — nenhuma morte futura fica sem explicação.
+
+### Tests
+
+- **Novo teste de estresse** (`startup-keepalive.mjs`, ambiente hostil): sobe o app pelo CLI, **destrói o `stdout`/`stderr` do launcher** (simulando a queda do MobaXterm) e **mata o worker à força** — o CLI continua vivo, o servidor responde HTTP 200 em todos os pontos e o worker é reiniciado. Suíte completa: 38 keepalive + 39 fase2-worker + 32 auth + 16 serviços + 22 E2E + 5 unit.
+
 ## [0.1.12] — 2026-11-18
 
 ### Security

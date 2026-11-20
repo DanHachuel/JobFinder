@@ -78,6 +78,22 @@ function appendErrorLog(line) {
   }
 }
 
+/**
+ * Append one line to <dataDir>/worker.log — the worker's lifecycle log
+ * (boot, passes, stops). The worker runs with stdio all-'ignore': the FILE
+ * is the log, the console (a NUL device or a dying MobaXterm pipe) is not
+ * a channel anything may depend on.
+ */
+let logFilePath = null;
+function appendLogFile(line) {
+  if (!logFilePath) return;
+  try {
+    fs.appendFileSync(logFilePath, `${new Date().toISOString()} ${line}\n`, 'utf8');
+  } catch {
+    /* read-only data dir: worker-error.log may still have the failures */
+  }
+}
+
 /** Report an unexpected failure: file log + logger + safe console mirror. */
 function reportUnexpected(scope, reason) {
   const message = reason instanceof Error ? reason.message : String(reason);
@@ -366,7 +382,7 @@ function stop(reason) {
   } catch {
     /* state is best-effort during shutdown */
   }
-  appendErrorLog(`stopped (${reason})`);
+  appendLogFile(`stopped (${reason})`);
   safeWrite(process.stderr, `[jobfinder:worker] stopped (${reason}).\n`);
   process.exit(0);
 }
@@ -406,12 +422,15 @@ function schedule() {
 
 async function main() {
   const dataDir = resolveDataDir();
+  // Log paths first: even the boot checks below must leave a file trace.
+  errorLogPath = path.join(dataDir, 'worker-error.log');
+  // Lifecycle log (boot/passes/stops): stdio is 'ignore', the file IS the log.
+  logFilePath = path.join(dataDir, 'worker.log');
   if (!fs.existsSync(dataDir)) {
-    console.error(`[jobfinder:worker] data directory not found: ${dataDir}`);
+    appendErrorLog(`data directory not found: ${dataDir}`);
+    safeWrite(process.stderr, `[jobfinder:worker] data directory not found: ${dataDir}\n`);
     process.exit(1);
   }
-  // Crash/forensic log: the only artifact that survives a dead pipe.
-  errorLogPath = path.join(dataDir, 'worker-error.log');
 
   // Orphan detection by PIPE (primary). The supervisor keeps our stdin pipe
   // open for as long as it lives; when it dies (any reason, hard kill
@@ -438,7 +457,8 @@ async function main() {
   logger = context.logger;
 
   if (anotherWorkerOwnsState()) {
-    console.error('[jobfinder:worker] another worker is already running - exiting.');
+    appendLogFile('another worker is already running - exiting.');
+    safeWrite(process.stderr, '[jobfinder:worker] another worker is already running - exiting.\n');
     process.exit(0);
   }
 
@@ -457,9 +477,8 @@ async function main() {
     logs: [],
   });
   logger?.info('worker', 'worker started', { pid: process.pid, intervalMs: INTERVAL_MS, dataDir });
-  console.log(
-    `[jobfinder:worker] running (pid ${process.pid}, every ${Math.round(INTERVAL_MS / 1000)}s) - data: ${dataDir}`
-  );
+  appendLogFile(`running (pid ${process.pid}, every ${Math.round(INTERVAL_MS / 1000)}s) - data: ${dataDir}`);
+  safeWrite(process.stdout, `[jobfinder:worker] running (pid ${process.pid}, every ${Math.round(INTERVAL_MS / 1000)}s)\n`);
 
   // Idempotent signals: only the first one triggers the graceful stop.
   const onSignal = (signal) => () => stop(`received ${signal}`);

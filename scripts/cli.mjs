@@ -200,6 +200,10 @@ async function commandStart({ port, host, dataDir, dryRun }) {
   process.env.JOBFINDER_DATA_DIR = resolved;
   process.env.JOBFINDER_PORT = String(listenPort);
   process.env.JOBFINDER_HOST = listenHost;
+  // Version: read from THIS file's package.json (never cwd) and handed to the
+  // server via env. Under npx the cwd is the user's directory, so a server
+  // that read its own version from cwd would print 0.0.00.
+  process.env.JOBFINDER_VERSION = VISUAL_VERSION;
   if (dryRun) process.env.JOBFINDER_DRY_RUN = '1';
 
   // Supervisão do worker. O CLI NUNCA depende do worker para viver: ele
@@ -243,10 +247,25 @@ async function commandStart({ port, host, dataDir, dryRun }) {
   };
 
   // Keep-alive inquebrável: timer de 24h SEM unref. Segurança extra — o
-  // socket do servidor (abaixo) já é a garantia principal.
-  setInterval(() => {}, 24 * 60 * 60 * 1000);
+  // socket do servidor (abaixo) já é a garantia principal. Nunca use unref()
+  // aqui: um timer solto é o que permite o loop esvaziar e o processo sumir.
+  const keepAliveTimer = setInterval(() => {}, 24 * 60 * 60 * 1000);
 
-  // Forensic trail: se o launcher morrer, o motivo fica visível.
+  // Forensic trail: se o launcher morrer, o motivo fica visível. `beforeExit`
+  // avisa ANTES de o loop esvaziar (com os handles ativos) e permite re-armar
+  // o keep-alive; `exit` registra o código final.
+  process.on('beforeExit', (code) => {
+    const handles = process.getActiveResourcesInfo?.() ?? [];
+    console.error(
+      `[jobfinder] launcher: event loop esvaziando (beforeExit code=${code}) — ` +
+        `handles: ${handles.join(', ') || 'NENHUM'}`
+    );
+    if (!stopping) {
+      console.error('[jobfinder] launcher: re-armando o keep-alive para nao voltar ao prompt.');
+      clearInterval(keepAliveTimer);
+      setInterval(() => {}, 24 * 60 * 60 * 1000);
+    }
+  });
   process.on('exit', (code) => {
     console.error(`[jobfinder] launcher exiting with code ${code}.`);
   });

@@ -31,15 +31,15 @@ A **background worker** (separate Node process) keeps the queues moving even wit
 Windows / CMD / MobaXterm:
 
 ```bash
-npx.cmd --yes --prefer-online @danhachuel/jobfinder@0.1.7 install
-npx.cmd --yes --prefer-online @danhachuel/jobfinder@0.1.7
+npx.cmd --yes --prefer-online @danhachuel/jobfinder@0.1.15 install
+npx.cmd --yes --prefer-online @danhachuel/jobfinder@0.1.15
 ```
 
 Normal terminal:
 
 ```bash
-npx --yes @danhachuel/jobfinder@0.1.7 install
-npx --yes @danhachuel/jobfinder@0.1.7
+npx --yes @danhachuel/jobfinder@0.1.15 install
+npx --yes @danhachuel/jobfinder@0.1.15
 ```
 
 `install` creates `~/.jobfinder/` (config, auth, channels, topics, posts, connections, dm-cascades, jobs, applications, resume, logs). It is safe to re-run: existing data is never overwritten.
@@ -54,12 +54,12 @@ The single first-run account is created in `~/.jobfinder/auth.json` on the first
 # Windows (PowerShell)
 $env:JOBFINDER_INITIAL_EMAIL = "voce@exemplo.com"
 $env:JOBFINDER_INITIAL_PASSWORD = "sua-senha-forte"
-npx --yes @danhachuel/jobfinder@0.1.14
+npx --yes @danhachuel/jobfinder@0.1.15
 
 # Linux / macOS
 JOBFINDER_INITIAL_EMAIL="voce@exemplo.com" \
 JOBFINDER_INITIAL_PASSWORD="sua-senha-forte" \
-npx --yes @danhachuel/jobfinder@0.1.14
+npx --yes @danhachuel/jobfinder@0.1.15
 ```
 
 Alternative: create the account directly in `~/.jobfinder/auth.json` (see the `user` object) before starting the app.
@@ -130,6 +130,7 @@ node scripts/manual-tests/fase1-dryrun-services.mjs    # API: flag dry-run aplic
 node scripts/manual-tests/fase1-ui-e2e.mjs             # UI (Playwright): login, badges, configurações, logout
 node scripts/manual-tests/fase2-worker.mjs             # worker: spawn, filas, limite de DMs, órfãos, estresse
 node scripts/manual-tests/fase3-seed-env.mjs           # segurança: seed por env, nenhuma credencial exposta
+node scripts/manual-tests/fase4-npx-start.mjs          # npx/cwd estranho: versão correta, processo vivo, HTTP 200
 node scripts/manual-tests/startup-keepalive.mjs        # runtime: boot, unhandledRejection, EPIPE, sinais
 node --test tests/*.js                                # contratos/concorrência/UI (stubs por enquanto)
 ```

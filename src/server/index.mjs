@@ -13,10 +13,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 
 import { createApp } from './app.mjs';
 import { createContext } from './context.mjs';
 import { resolveDataDir, UI_DIST } from './paths.mjs';
+
+/** ESM-safe package.json reader: resolved from THIS file, never from cwd. */
+const require = createRequire(import.meta.url);
 
 /**
  * Logger used by the global process handlers below. Assigned by start():
@@ -78,12 +82,27 @@ function installProcessResilience() {
   }
 }
 
+/**
+ * Version source, in order:
+ *   1. JOBFINDER_VERSION (set by the launcher, which reads package.json from
+ *      its own location — always correct)
+ *   2. package.json resolved relative to THIS module
+ *
+ * `process.cwd()` is NEVER used: under `npx` the cwd is the user's directory
+ * (MobaXterm home, a random PowerShell path), so a cwd-relative read fails and
+ * the server silently reports 0.0.00.
+ */
 function readPkgVersion() {
+  const fromEnv = process.env.JOBFINDER_VERSION;
   try {
-    const pkg = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), 'package.json'), 'utf8'));
-    return { visual: pkg.version, npm: pkg.version.split('.').map((p) => String(Number(p))).join('.') };
+    const pkg = fromEnv ? { version: fromEnv } : require('../../package.json');
+    const resolved = pkg.version;
+    if (!resolved || resolved === '0.0.00') throw new Error('versao vazia');
+    return { visual: resolved, npm: resolved.split('.').map((p) => String(Number(p))).join('.') };
   } catch {
-    return { visual: '0.0.00', npm: '0.0.0' };
+    const fallback = '0.0.00';
+    console.error(`[jobfinder] nao foi possivel ler a versao do package.json (env=${fromEnv ? 'set' : 'unset'}) — usando ${fallback}`);
+    return { visual: fallback, npm: '0.0.0' };
   }
 }
 
@@ -155,6 +174,37 @@ export async function start() {
   // this process means closing the browser never pauses the automations.
 
   let shuttingDown = false;
+
+  /**
+   * ULTIMATE keep-alive guard (0.1.15).
+   *
+   * The listening socket is the primary guarantee. This is the backstop for
+   * the case where something empties the event loop without closing the
+   * server: Node fires `beforeExit` right before exiting naturally, and
+   * scheduling new work there CANCELS the exit. If that ever happens we now
+   * (a) leave a loud forensic trail with the active handles and (b) re-arm a
+   * referenced timer so the process cannot vanish silently.
+   */
+  const armKeepAlive = () => setInterval(() => {}, 60_000);
+  let keepAlive = armKeepAlive();
+  process.on('beforeExit', (code) => {
+    const handles = process.getActiveResourcesInfo?.() ?? [];
+    const socketAlive = handles.some((handle) => /server|tcp|socket|pipe/i.test(handle));
+    if (shuttingDown) return;
+    console.error(
+      `[jobfinder] event loop esvaziando (beforeExit code=${code}) — ` +
+        `socket do servidor ativo: ${socketAlive}; handles: ${handles.join(', ') || 'NENHUM'}`
+    );
+    if (!socketAlive && server.listening) {
+      console.error('[jobfinder] re-armando o keep-alive para evitar encerramento prematuro.');
+      clearInterval(keepAlive);
+      keepAlive = armKeepAlive();
+    }
+  });
+  process.on('exit', (code) => {
+    console.error(`[jobfinder] processo do servidor encerrando (code=${code}).`);
+  });
+
   const shutdown = (signal) => {
     if (shuttingDown) return;
     shuttingDown = true;

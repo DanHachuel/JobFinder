@@ -6,6 +6,17 @@ All notable changes to JobFinder are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.15] — 2026-11-21
+
+### Fixed
+
+- **Versão `0.0.00` ao rodar via `npx`**: `readPkgVersion()` em `src/server/index.mjs` lia `package.json` com `path.resolve(process.cwd(), 'package.json')`. Sob `npx` o cwd é o diretório do usuário (home do MobaXterm, um path qualquer do PowerShell), a leitura falhava em silêncio e o servidor imprimia `JobFinder v0.0.00 (npm 0.0.0)`. Agora a versão vem de `JOBFINDER_VERSION` (definida pelo launcher, que lê o `package.json` a partir da própria localização do arquivo) ou, na ausência dela, de `createRequire(import.meta.url)` + `require('../../package.json')` — resolvido a partir **deste módulo**, nunca do cwd. O fallback ruidoso (`console.error`) substitui o silencioso.
+- **Retenção do event loop com rastro forense**: `beforeExit` no launcher **e** no servidor registra os handles ativos antes de qualquer saída natural e re-arma um timer de keep-alive **referenciado** (sem `unref()`) quando o socket do servidor não está entre eles — a saída silenciosa agora é impossível sem deixar `[jobfinder] launcher: event loop esvaziando (beforeExit code=…) — handles: …` no terminal. `exit` registra o código final nos dois processos. Nenhum `server.unref()` e nenhum `process.exit(0)` no caminho de startup.
+
+### Tests
+
+- Nova suíte `scripts/manual-tests/fase4-npx-start.mjs` — **12 verificações, 0 falhas**, rodando o binário de um **diretório estranho** (reprodução do ambiente `npx`/MobaXterm): versão correta na linha do `listen`, processo vivo depois do banner, HTTP 200, caminho `node src/server/index.mjs` direto sem `JOBFINDER_VERSION` (valida o `createRequire`) e caminho completo com worker ativo.
+
 ## [0.1.14] — 2026-11-20
 
 ### Security

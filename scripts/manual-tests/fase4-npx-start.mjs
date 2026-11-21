@@ -1,15 +1,16 @@
 /**
- * Reprodução do cenário real: `npx @danhachuel/jobfinder@<versão>` rodando a
- * partir de um diretório ESTRANHO (fora do repo), como o usuário faz no
- * MobaXterm / PowerShell.
+ * Reprodução do cenário real: o binário rodando a partir de um diretório
+ * ESTRANHO (fora do repo), como o usuário faz no MobaXterm / PowerShell.
+ *
+ * Uso:
+ *   node scripts/manual-tests/fase4-npx-start.mjs              # build local
+ *   node scripts/manual-tests/fase4-npx-start.mjs --remote 0.1.15   # pacote publicado via npx
  *
  * Verifica:
  *   1. a versão impressa é a correta (não 0.0.00)
  *   2. o processo continua vivo depois do banner (event loop retido)
  *   3. o servidor responde HTTP 200
  *   4. o terminal não volta ao prompt sozinho
- *
- * Uso: node scripts/manual-tests/fase4-npx-start.mjs [versao]
  */
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -37,18 +38,32 @@ function check(name, condition, extra = '') {
   }
 }
 
-console.log(`\n== JobFinder (build local) em ${FOREIGN_CWD} ==`);
-console.log('(equivalente ao `npx @danhachuel/jobfinder@<versao>`: mesmo cwd estranho, mesmo binário)');
-
-// Roda o CLI LOCAL a partir de um diretório estranho — reproduz o ambiente do
-// npx (cwd != raiz do pacote) sem depender de publicação prévia.
+// Modo remoto: usa o pacote PUBLICADO via npx (validação real da release).
+const remoteIndex = process.argv.indexOf('--remote');
+const REMOTE_VERSION = remoteIndex > -1 ? process.argv[remoteIndex + 1] : null;
 const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.slice(1)), '..', '..');
-const cli = spawn(process.execPath, [path.join(REPO_ROOT, 'scripts', 'cli.mjs'), 'start', '--port', String(PORT)], {
-  cwd: FOREIGN_CWD,
-  env: { ...process.env, JOBFINDER_HOME: HOME, JOBFINDER_NO_WORKER: '1' },
-  stdio: ['ignore', 'pipe', 'pipe'],
-});
-const npx = cli;
+
+if (REMOTE_VERSION) {
+  console.log(`\n== npx @danhachuel/jobfinder@${REMOTE_VERSION} em ${FOREIGN_CWD} ==`);
+} else {
+  console.log(`\n== JobFinder (build local) em ${FOREIGN_CWD} ==`);
+  console.log('(equivalente ao `npx @danhachuel/jobfinder@<versao>`: mesmo cwd estranho, mesmo binário)');
+}
+
+// `shell: true` é obrigatório no Windows para spawnar um .cmd (npx.cmd).
+const npx = REMOTE_VERSION
+  ? spawn(`npx --yes @danhachuel/jobfinder@${REMOTE_VERSION} start --port ${PORT}`, {
+      cwd: FOREIGN_CWD,
+      shell: true,
+      env: { ...process.env, JOBFINDER_HOME: HOME, JOBFINDER_NO_WORKER: '1' },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+  : spawn(process.execPath, [path.join(REPO_ROOT, 'scripts', 'cli.mjs'), 'start', '--port', String(PORT)], {
+      cwd: FOREIGN_CWD,
+      env: { ...process.env, JOBFINDER_HOME: HOME, JOBFINDER_NO_WORKER: '1' },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+const cli = npx;
 
 let out = '';
 let err = '';
@@ -73,9 +88,11 @@ check('servidor respondeu HTTP na porta', httpOk);
 
 // 2. versão correta no output (a linha do servidor, não só o banner do CLI)
 const serverLine = out.split('\n').find((l) => l.includes('listening on')) ?? '';
+const expected = REMOTE_VERSION ? REMOTE_VERSION.replace(/^0\./, '0.') : /0\.1\.\d+/.source;
+const expectedRe = REMOTE_VERSION ? new RegExp(REMOTE_VERSION.replace(/\./g, '\\.')) : /0\.1\.\d+/;
 const versionLine = out.split('\n').find((l) => /^JobFinder\s+v?\d/.test(l.trim())) ?? '';
-check('versão correta (não 0.0.00)', /v0\.1\.\d+/.test(versionLine) && !versionLine.includes('0.0.00'), versionLine.trim());
-check('linha do listen traz a versão correta', /0\.1\.\d+/.test(serverLine) && !serverLine.includes('0.0.00'), serverLine.trim());
+check('versão correta (não 0.0.00)', expectedRe.test(versionLine) && !versionLine.includes('0.0.00'), versionLine.trim());
+check('linha do listen traz a versão correta', expectedRe.test(serverLine) && !serverLine.includes('0.0.00'), serverLine.trim());
 
 // 3. o processo PRECISA continuar vivo (não voltar ao prompt)
 await delay(8000);

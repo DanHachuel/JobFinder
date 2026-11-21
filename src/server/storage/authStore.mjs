@@ -15,10 +15,33 @@ import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypt
 
 import { nowIso } from './jsonStore.mjs';
 
-/** Pre-created local user (first run). */
-export const DEFAULT_EMAIL = 'dan.hachuel@gmail.com';
-export const DEFAULT_PASSWORD = '123456';
+/**
+ * First-run account (seed).
+ *
+ * The credentials are NEVER rendered: no API route returns them and no
+ * log/console line prints them. An operator can define their own initial
+ * credentials through the environment (`.env`, CLI, container) before the
+ * first boot:
+ *
+ *   JOBFINDER_INITIAL_EMAIL     initial account e-mail
+ *   JOBFINDER_INITIAL_PASSWORD  initial account password (min 6 chars)
+ *
+ * Without them the built-in seed is used and the user is expected to change
+ * the password in Configuracoes → Seguranca right after the first login.
+ */
+const SEED_EMAIL = 'dan.hachuel@gmail.com';
+const SEED_PASSWORD = '123456';
 export const DEFAULT_USER_NAME = 'Dan';
+
+/** Effective first-run e-mail (env override wins over the built-in seed). */
+export function seedEmail() {
+  return process.env.JOBFINDER_INITIAL_EMAIL?.trim() || SEED_EMAIL;
+}
+
+/** Effective first-run password (env override wins over the built-in seed). */
+export function seedPassword() {
+  return process.env.JOBFINDER_INITIAL_PASSWORD || SEED_PASSWORD;
+}
 
 /** Cookie used to keep the local session in the browser. */
 export const SESSION_COOKIE = 'jobfinder_session';
@@ -113,9 +136,9 @@ export function defaultAuthPayload() {
     createdAt: nowIso(),
     sessionSecret: randomBytes(32).toString('hex'),
     user: {
-      email: DEFAULT_EMAIL,
+      email: seedEmail(),
       name: DEFAULT_USER_NAME,
-      passwordHash: hashPassword(DEFAULT_PASSWORD),
+      passwordHash: hashPassword(seedPassword()),
       passwordUpdatedAt: nowIso(),
     },
     /** Revoked token ids (logout) — only the last 50 are kept. */
@@ -170,16 +193,16 @@ export class AuthStore {
     const data = this.read();
     const user = data.user ?? {};
     return {
-      email: user.email ?? DEFAULT_EMAIL,
+      email: user.email ?? seedEmail(),
       name: user.name ?? DEFAULT_USER_NAME,
       passwordUpdatedAt: user.passwordUpdatedAt ?? null,
       createdAt: data.createdAt ?? null,
     };
   }
 
-  /** True when the account still uses the first-run password. */
+  /** True when the account still uses the first-run (seed) password. */
   usingDefaultPassword() {
-    return verifyPassword(DEFAULT_PASSWORD, this.read().user?.passwordHash);
+    return verifyPassword(seedPassword(), this.read().user?.passwordHash);
   }
 
   /** Check credentials; returns the public user or null. */
@@ -223,11 +246,11 @@ export class AuthStore {
   }
 
   /** Issue a session token for the user. */
-  issueToken(email = DEFAULT_EMAIL) {
+  issueToken(email = seedEmail()) {
     const data = this.read();
     const secret = data.sessionSecret;
     if (!secret) throw authError('auth.json sem sessionSecret — apague o arquivo para recriá-lo.');
-    return createSessionToken(email ?? data.user?.email ?? DEFAULT_EMAIL, secret);
+    return createSessionToken(email ?? data.user?.email ?? seedEmail(), secret);
   }
 
   /** Validate a token: returns the payload or null. */

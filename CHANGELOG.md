@@ -6,6 +6,21 @@ All notable changes to JobFinder are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.14] — 2026-11-20
+
+### Security
+
+- **Saneamento de credenciais — nenhuma senha em nenhuma superfície**: removido o cartão âmbar de "Primeiro acesso" da tela de login, que exibia e-mail e senha padrão. O terminal já não os exibia (0.1.12) e agora nenhuma rota, resposta de API, log ou documento os expõe.
+- **Rota `GET /api/auth/defaults` descontinuada**: era o canal que alimentava o cartão com o e-mail do usuário semeado. Removida do router — nenhum endpoint devolve mais credenciais.
+- **Onboarding por variável de ambiente**: o first-run account aceita `JOBFINDER_INITIAL_EMAIL` e `JOBFINDER_INITIAL_PASSWORD` (mínimo de 6 caracteres). Sem elas, o seed embutido é usado e a senha deve ser trocada em **Configurações → Segurança** no primeiro acesso. O valor nunca é renderizado em lugar nenhum.
+- **Smoke test do CI sem credenciais no repositório**: `.github/workflows/publish-npm.yml` define as variáveis de seed dentro do step, em vez de embutir e-mail/senha no arquivo versionado.
+- **Documentação**: README e CHANGELOG sem credenciais; a seção "First login" passa a explicar o onboarding (env/`auth.json`) sem citar senha. Nota correspondente adicionada à tela de login.
+
+### Notas
+
+- A tela de login ficou apenas com o formulário (e-mail, senha, mostrar/ocultar, entrar) e a nota de onboarding em texto simples.
+- Instalações existentes não são afetadas: um `auth.json` já criado é preservado e as env vars só valem na primeira criação.
+
 ## [0.1.13] — 2026-11-20
 
 ### Changed
@@ -26,7 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Security
 
-- **Remoção definitiva da senha no terminal**: a linha `Login: <email> / <senha>` foi **deletada** do startup do servidor — o terminal não exibe mais e-mail nem senha (a dica de "troque a senha padrão" continua apenas na UI, em Configurações → Segurança). Verificado em boot real: stdout/stderr sem `123456`, sem e-mail e sem `Login:`.
+- **Remoção definitiva da senha no terminal**: a linha `Login: <email> / <senha>` foi **deletada** do startup do servidor — o terminal não exibe mais e-mail nem senha (a recomendação de troca de senha continua apenas na UI, em Configurações → Segurança). Verificado em boot real: stdout/stderr sem senha, sem e-mail e sem `Login:`.
 
 ### Fixed
 
@@ -132,7 +147,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- **Sistema de login local (autenticação single-user)**: usuário pré-criado `dan.hachuel@gmail.com` / `123456`, com a senha gravada em `~/.jobfinder/auth.json` usando **scrypt** (salt + hash — nunca em texto puro). Sessão via token assinado (HMAC-SHA256) em **cookie HTTP-only** (`jobfinder_session`, 7 dias, `SameSite=Lax`), também aceito como `Authorization: Bearer` para testes de API. Novo arquivo `src/server/storage/authStore.mjs` + rotas `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/session`, `PUT /api/auth/password`, `GET /api/auth/defaults`.
+- **Sistema de login local (autenticação single-user)**: conta única criada no primeiro boot em `~/.jobfinder/auth.json` com a senha em **hash scrypt** (salt + verificação em tempo constante — nunca em texto puro). Sessão via token assinado (HMAC-SHA256) em **cookie HTTP-only** (`jobfinder_session`, 7 dias, `SameSite=Lax`), também aceito como `Authorization: Bearer` para testes de API. Novo arquivo `src/server/storage/authStore.mjs` + rotas `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/session`, `PUT /api/auth/password`, `GET /api/auth/defaults`. *(Nota de 2026-11-20: as credenciais de seed foram removidas desta entrada e a rota `/auth/defaults` foi descontinuada na 0.1.14 — ver “Saneamento de credenciais”.)*
 - **Proteção de rotas**: todo o app (exceto `/login`) exige sessão ativa — sem sessão, a UI redireciona para `/login` e a API responde `401 unauthorized`. Ficam públicos apenas `/api/auth/*`, `/api/health` (smoke test do CI) e `/api/channels/oauth/callback` (redirect do LinkedIn). Um `401` em qualquer request derruba a sessão e volta para o login.
 - **Tela de login** (`src/ui/src/pages/Login.jsx`) no padrão visual da tela de login do ProdMaker, adaptada para a identidade JobFinder (`#1e1b4b`, acento indigo): painel de marca escuro com orbs/partículas animadas e os 4 passos do fluxo (Publique com LLM → Conecte-se → DMs em cascata → Candidate-se), painel de formulário com ícones, mostrar/ocultar senha, caixa de erro e dica de primeiro acesso com as credenciais padrão (a dica desaparece quando a senha deixa de ser a padrão).
 - **Logout e conta na sidebar**: rodapé da sidebar mostra o usuário logado (avatar + e-mail) e o botão **Sair**, ao lado do selo "100% local".

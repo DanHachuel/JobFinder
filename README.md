@@ -46,12 +46,23 @@ npx --yes @danhachuel/jobfinder@0.1.7
 
 ## First login
 
-The app is protected by a local session. On the first run a single user is created:
+The app is protected by a local session. **Credentials are never displayed** — not on the login screen, not in the terminal, and not in this document.
 
-| Field | Value |
-|---|---|
-| E-mail | `dan.hachuel@gmail.com` |
-| Password | `123456` |
+The single first-run account is created in `~/.jobfinder/auth.json` on the first boot. Define your own initial credentials through the environment **before** the first start:
+
+```bash
+# Windows (PowerShell)
+$env:JOBFINDER_INITIAL_EMAIL = "voce@exemplo.com"
+$env:JOBFINDER_INITIAL_PASSWORD = "sua-senha-forte"
+npx --yes @danhachuel/jobfinder@0.1.14
+
+# Linux / macOS
+JOBFINDER_INITIAL_EMAIL="voce@exemplo.com" \
+JOBFINDER_INITIAL_PASSWORD="sua-senha-forte" \
+npx --yes @danhachuel/jobfinder@0.1.14
+```
+
+Alternative: create the account directly in `~/.jobfinder/auth.json` (see the `user` object) before starting the app.
 
 - Without a session every screen redirects to `/login` (and the API answers `401`).
 - The password is stored hashed (scrypt) in `~/.jobfinder/auth.json` — never in plain text. Change it in **Configurações → Segurança** right after the first login.
@@ -59,7 +70,7 @@ The app is protected by a local session. On the first run a single user is creat
 
 ## Usage
 
-1. Start the app → it opens `http://localhost:4040` → log in with the local user above
+1. Start the app → open `http://localhost:4040` → log in with the credentials you configured
 2. **Integrações** → connect LinkedIn:
    - **Recommended:** create your LinkedIn app ([Criar API Oficial do LinkedIn](legal/)) → paste Client ID/Secret → run the OAuth flow
    - **Fallback:** export cookies with ["Get cookies.txt LOCALLY"](https://chromewebstore.google.com/) and upload `cookies.txt`
@@ -117,8 +128,9 @@ Manual smoke tests (start a temporary server + Playwright for the UI):
 node scripts/manual-tests/fase1-auth-dryrun.mjs        # API: login, sessão, toggle dry-run, troca de senha
 node scripts/manual-tests/fase1-dryrun-services.mjs    # API: flag dry-run aplicada a postagens/convites/DMs
 node scripts/manual-tests/fase1-ui-e2e.mjs             # UI (Playwright): login, badges, configurações, logout
-node scripts/manual-tests/startup-keepalive.mjs        # runtime: boot, unhandledRejection, EPIPE, sinais
 node scripts/manual-tests/fase2-worker.mjs             # worker: spawn, filas, limite de DMs, órfãos, estresse
+node scripts/manual-tests/fase3-seed-env.mjs           # segurança: seed por env, nenhuma credencial exposta
+node scripts/manual-tests/startup-keepalive.mjs        # runtime: boot, unhandledRejection, EPIPE, sinais
 node --test tests/*.js                                # contratos/concorrência/UI (stubs por enquanto)
 ```
 

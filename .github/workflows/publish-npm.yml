@@ -79,15 +79,20 @@ jobs:
           test -d "$TEST_ROOT/logs"
 
       - name: Smoke test API boots (dry-run)
+        env:
+          # Seed credentials are defined HERE (runtime-only) and never stored
+          # in the repository — see the 0.1.14 security note.
+          JOBFINDER_INITIAL_EMAIL: "ci-smoke@jobfinder.local"
+          JOBFINDER_INITIAL_PASSWORD: "ci-smoke-pass"
         run: |
           TEST_ROOT="${RUNNER_TEMP}/jobfinder-boot-smoke"
           JOBFINDER_HOME="$TEST_ROOT" JOBFINDER_PORT=3399 node src/server/index.mjs &
           SERVER_PID=$!
           sleep 3
           curl --fail --silent http://127.0.0.1:3399/api/health
-          # local auth: the pre-created user must be able to log in
+          # local auth: the seeded user must be able to log in
           curl --fail --silent -X POST -H 'Content-Type: application/json' \
-            -d '{"email":"dan.hachuel@gmail.com","password":"123456"}' \
+            -d "{\"email\":\"$JOBFINDER_INITIAL_EMAIL\",\"password\":\"$JOBFINDER_INITIAL_PASSWORD\"}" \
             http://127.0.0.1:3399/api/auth/login
           kill $SERVER_PID || true
 

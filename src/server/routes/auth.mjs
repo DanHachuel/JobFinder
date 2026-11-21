@@ -5,8 +5,10 @@
  *   POST /api/auth/logout     clears the cookie and revokes the token
  *   GET  /api/auth/session    { authenticated, user }
  *   PUT  /api/auth/password   { currentPassword, newPassword, confirmPassword }
- *   GET  /api/auth/defaults   first-run hint (default e-mail + flag)
  *
+ * No route exposes the seeded credentials: the first-run account is created
+ * by the bootstrap (optionally overridden by JOBFINDER_INITIAL_EMAIL /
+ * JOBFINDER_INITIAL_PASSWORD) and never returned to the browser.
  * Single local user stored in ~/.jobfinder/auth.json (password hashed with
  * scrypt — see storage/authStore.mjs).
  */
@@ -16,7 +18,6 @@ import { asyncRoute, badRequest } from '../middleware/errors.mjs';
 import { requireSession } from '../middleware/auth.mjs';
 import {
   AuthStore,
-  DEFAULT_EMAIL,
   SESSION_TTL_MS,
   extractToken,
   sessionCookieOptions,
@@ -85,13 +86,6 @@ export function authRoutes({ store, logger }) {
       const user = auth.changePassword({ currentPassword, newPassword, confirmPassword });
       logger.info('auth', 'password changed', { email: user.email });
       res.json({ user, message: 'Senha alterada. Use a nova senha no próximo login.' });
-    })
-  );
-
-  router.get(
-    '/defaults',
-    asyncRoute((req, res) => {
-      res.json({ email: DEFAULT_EMAIL, firstRun: auth.usingDefaultPassword() });
     })
   );
 

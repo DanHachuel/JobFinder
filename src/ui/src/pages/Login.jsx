@@ -6,7 +6,7 @@
  * fluxo) e formulário à direita. Autenticação contra
  * ~/.jobfinder/auth.json (senha com hash scrypt no backend).
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
@@ -22,7 +22,6 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-import { api } from '../lib/api.js';
 import { useAuth } from '../lib/auth.jsx';
 
 const STEPS = [
@@ -51,20 +50,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [hint, setHint] = useState(null);
-
-  const loadHint = useCallback(async () => {
-    try {
-      const data = await api.get('/auth/defaults');
-      setHint(data.firstRun ? data : null);
-    } catch {
-      setHint(null);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadHint();
-  }, [loadHint]);
 
   const from = location.state?.from ?? '/';
 
@@ -207,16 +192,14 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {hint && (
-            <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-              <p className="font-semibold">Primeiro acesso (usuário pré-criado)</p>
-              <p className="mt-1">
-                E-mail <code className="font-mono font-semibold">{hint.email}</code> · senha{' '}
-                <code className="font-mono font-semibold">123456</code>
-              </p>
-              <p className="mt-1 text-amber-700">Troque a senha em Configurações → Segurança após o primeiro login.</p>
-            </div>
-          )}
+          {/* Onboarding sem expor credenciais: onde o acesso inicial é definido. */}
+          <p className="mt-6 text-xs leading-relaxed text-gray-400">
+            Acesso restrito. O usuário inicial é definido no primeiro boot por meio das variáveis{' '}
+            <code className="font-mono text-gray-500">JOBFINDER_INITIAL_EMAIL</code> e{' '}
+            <code className="font-mono text-gray-500">JOBFINDER_INITIAL_PASSWORD</code>, ou diretamente em{' '}
+            <code className="font-mono text-gray-500">~/.jobfinder/auth.json</code>. Recomendamos trocar a senha em
+            Configurações → Segurança após o primeiro acesso.
+          </p>
         </div>
 
         <div className="mt-8 text-center text-xs text-gray-400">

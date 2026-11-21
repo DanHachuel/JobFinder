@@ -77,8 +77,19 @@ try {
   check('tela de login é exibida', loginVisible);
   const brandVisible = await page.locator('h1', { hasText: 'JobFinder' }).isVisible();
   check('painel de marca JobFinder presente', brandVisible);
-  const hintVisible = await page.locator('text=dan.hachuel@gmail.com').isVisible();
-  check('dica de primeiro acesso com o usuário padrão', hintVisible);
+  // REGRESSÃO DE SEGURANÇA (0.1.14): nenhuma credencial pode aparecer na
+  // tela de login. A ausência do cartão é obrigatória, não opcional.
+  const bodyText = (await page.locator('body').innerText()).toLowerCase();
+  check('tela de login NÃO exibe e-mail do usuário semeado', !bodyText.includes('dan.hachuel'));
+  check('tela de login NÃO exibe senha padrão', !bodyText.includes('123456'));
+  check('tela de login NÃO exibe o cartão de credenciais', !bodyText.includes('usuário pré-criado'));
+  // Nenhum elemento <code> (onde o cartão exibia e-mail/senha) pode conter credencial.
+  const codes = await page.locator('code').evaluateAll((nodes) => nodes.map((n) => n.textContent || ''));
+  check('nenhum bloco <code> contém e-mail ou senha', !codes.some((c) => /@|123456/.test(c)), codes.join(','));
+  const onboardingNote = await page.locator('text=JOBFINDER_INITIAL_PASSWORD').count();
+  check('nota de onboarding (sem senha) está presente', onboardingNote > 0);
+  const inputs = await page.locator('input').evaluateAll((nodes) => nodes.map((n) => n.placeholder || ''));
+  check('nenhum placeholder contém credencial', !inputs.some((p) => /dan\.hachuel|123456/.test(p)), inputs.filter(Boolean).join(','));
 
   console.log('\n== Credenciais inválidas ==');
   await page.fill('#email', 'dan.hachuel@gmail.com');

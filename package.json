@@ -1,6 +1,6 @@
 {
   "name": "@danhachuel/jobfinder",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "description": "JobFinder — LinkedIn automation platform (posts, connections/DMs, job matching) with a React + Vite UI. Intelligent workflows, JSON storage.",
   "keywords": [
     "linkedin",
@@ -21,6 +21,7 @@
     "scripts/",
     "src/server/",
     "src/ui/dist/",
+    "ecosystem.config.cjs",
     "CHANGELOG.md",
     "README.md",
     "LICENSE"
@@ -32,6 +33,11 @@
     "dev:ui": "npm --prefix src/ui run dev",
     "build": "npm --prefix src/ui run build",
     "start": "node scripts/cli.mjs start",
+    "start:daemon": "node scripts/cli.mjs --daemon",
+    "daemon:stop": "node scripts/cli.mjs stop",
+    "daemon:logs": "pm2 logs jobfinder",
+    "pm2:start": "pm2 start ecosystem.config.cjs",
+    "pm2:stop": "pm2 stop ecosystem.config.cjs",
     "smoke": "node scripts/cli.mjs install && node scripts/cli.mjs --version"
   },
   "engines": {
@@ -43,7 +49,8 @@
     "pdfjs-dist": "^6.5.438"
   },
   "optionalDependencies": {
-    "playwright": "^1.65.0"
+    "playwright": "^1.65.0",
+    "pm2": "^6.0.14"
   },
   "devDependencies": {
     "concurrently": "^10.0.7"

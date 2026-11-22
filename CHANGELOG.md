@@ -6,6 +6,28 @@ All notable changes to JobFinder are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.16] — 2026-11-22
+
+### Added
+
+- **Modo daemon (`node scripts/cli.mjs --daemon`)**: o servidor sobe **detached** do terminal interativo e sobrevive ao fechamento da sessão — a resposta definitiva ao terminal (MobaXterm, wrapper do `npx`, PowerShell) que mata o processo filho. `stdio: ['ignore', <log>, <log>]` (nunca `inherit`), `windowsHide`, `creationFlags: CREATE_NEW_PROCESS_GROUP`, estado do daemon em `jobfinder-daemon.json` via **JsonStore** (atômico, nunca `fs.writeFileSync`). O terminal volta ao prompt em ~300 ms.
+- **Comando `stop`** (`--stop` / `--daemon-stop`): encerra o daemon com SIGTERM, espera o encerramento gracioso, força com SIGKILL se necessário e limpa o pid do registro. Roda limpo quando não há daemon.
+- **`scripts/start-windows.ps1`** (+ wrapper `start-windows.cmd` para duplo clique): detecta porta em uso, sobe o daemon via `Start-Process` (desacoplado dos pipes do terminal — com `&` ou `Start-Process -Wait` o PowerShell fica pendurado esperando handles do processo nativo), confere o `/api/health` e informa PID, log e como parar. Flag `-Local` usa o working copy; `-Version` fixa a versão do npm.
+- **`ecosystem.config.cjs` + scripts PM2** (`pm2:start`, `pm2:stop`, `daemon:logs`): JobFinder como serviço real, com reinício automático em caso de crash. `pm2` entra como **optionalDependency** — a regra do projeto é executar nativamente, sem infraestrutura obrigatória; sem pm2 tudo continua funcionando.
+- **README**: nova seção "Rodando como Serviço (Windows/Linux)" comparando as quatro formas (foreground / `--daemon` / script Windows / PM2).
+
+### Notas
+
+- O daemon grava o log em `~/.jobfinder/jobfinder.log` (respeita `JOBFINDER_HOME`/`JOBFINDER_DATA_DIR`).
+- `JOBFINDER_MODE=daemon` é propagado ao processo para identificar o modo no ambiente.
+- Validado: `npm ci` continua instalando pm2 como dependência opcional sem falhar (245 pacotes).
+
+### Tests
+
+- Nova suíte `scripts/manual-tests/fase5-daemon.mjs` — **21 verificações, 0 falhas**: launcher volta ao prompt com código 0 em < 8 s, pid registrado, HTTP 200, log em disco com a versão correta (não `0.0.00`), daemon sobrevive à morte do terminal, rodar duas vezes não duplica, `stop` encerra e limpa o registro, `stop` sem daemon não quebra.
+- PM2 validado ponta a ponta: `pm2 start ecosystem.config.cjs` → app `online` (pid + uptime), `/api/health` 200, `pm2 stop` → `stopped`.
+- Script Windows validado ponta a ponta (`-Local`): start → HTTP 200 e `exit 0` sem travar; `-Stop` → porta não responde mais e `exit 0`.
+
 ## [0.1.15] — 2026-11-21
 
 ### Fixed

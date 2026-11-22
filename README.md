@@ -85,8 +85,74 @@ Alternative: create the account directly in `~/.jobfinder/auth.json` (see the `u
 node scripts/cli.mjs start --port 3031     # custom port
 node scripts/cli.mjs start --data-dir .   # custom data directory
 node scripts/cli.mjs start --dry-run       # force dry-run
+node scripts/cli.mjs --daemon              # background (terminal fica livre)
+node scripts/cli.mjs stop                  # encerra o daemon
 node scripts/cli.mjs --version             # version info
 ```
+
+## Rodando como Serviço (Windows/Linux)
+
+Alguns terminais — MobaXterm, wrappers do `npx`, sessões de PowerShell — podem encerrar o
+processo filho a qualquer momento. Quando você precisa que o JobFinder **sobreviva ao
+terminal**, use uma das três formas abaixo.
+
+### 1. Foreground (via npx) — ideal para ver os logs
+
+```bash
+npx --yes @danhachuel/jobfinder@0.1.16
+```
+
+O servidor roda neste terminal; `Ctrl+C` encerra. Perfeito para depurar, ruim para deixar
+rodando: se o terminal fechar, o app morre.
+
+### 2. Daemon nativo — `node scripts/cli.mjs --daemon`
+
+O servidor sobe **detached** do terminal, com o log em `~/.jobfinder/jobfinder.log`. O
+terminal volta ao prompt na hora.
+
+```bash
+# pacote publicado (qualquer SO)
+npx --yes @danhachuel/jobfinder@0.1.16 --daemon --port 4040
+npx --yes @danhachuel/jobfinder@0.1.16 stop
+
+# working copy
+node scripts/cli.mjs --daemon --port 4040
+node scripts/cli.mjs stop
+```
+
+### 3. Script nativo do Windows — `scripts\start-windows.ps1`
+
+Duplo clique ou PowerShell: detecta porta em uso, sobe o daemon, confere o `/api/health` e
+informa o PID e o caminho do log.
+
+```powershell
+.\scripts\start-windows.ps1                       # versão latest do npm
+.\scripts\start-windows.ps1 -Version 0.1.16       # versão fixa
+.\scripts\start-windows.ps1 -Local                # working copy (desenvolvimento)
+.\scripts\start-windows.ps1 -Stop                 # encerra
+.\scripts\start-windows.cmd                       # wrapper para duplo clique
+```
+
+### 4. PM2 — serviço de verdade (Windows e Linux)
+
+Reinicia em caso de crash, gerencia logs e sobrevive ao fechamento da sessão.
+
+```bash
+npm i -g pm2                 # ou: npx pm2
+npm run pm2:start            # sobe (ecosystem.config.cjs)
+npm run daemon:logs          # acompanha os logs
+npm run pm2:stop             # para
+```
+
+`pm2` é dependência **opcional**: sem ela o app continua funcionando normalmente pelos
+caminhos 1–3 — a regra do projeto é executar nativamente, sem infraestrutura obrigatória.
+
+| Forma | Sobrevive ao terminal? | Logs | Uso |
+|---|---|---|---|
+| Foreground (npx) | não | no terminal | depuração rápida |
+| `--daemon` | sim | `~/.jobfinder/jobfinder.log` | servidor local simples |
+| `start-windows.ps1` | sim | `~/.jobfinder/jobfinder.log` | Windows, duplo clique |
+| PM2 | sim (reinicia) | `pm2 logs` | serviço de longo prazo |
 
 ## Screenshots
 

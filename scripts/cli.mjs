@@ -21,8 +21,10 @@ import path from 'node:path';
 import os from 'node:os';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { spawn } from 'node:child_process';
 
 import { ensureDataDir, resolveDataDir, isDataDirHealthy } from '../src/server/storage/bootstrap.mjs';
+import { JsonStore } from '../src/server/storage/jsonStore.mjs';
 import { spawnWorker } from '../src/server/workerRuntime.mjs';
 
 /**
@@ -83,6 +85,8 @@ Flags:
   --host <addr>      Bind address (default 127.0.0.1)
   --data-dir <path>  Data directory (default ~/.jobfinder, override with JOBFINDER_HOME)
   --dry-run          Run with automations in dry-run mode (no real LinkedIn actions)
+  --daemon           Run detached from this terminal (background service)
+  --stop             Stop the daemon started with --daemon
 
 Install commands (canonical npm version):
   npx --yes @danhachuel/jobfinder@${NPM_VERSION} install
@@ -90,7 +94,7 @@ Install commands (canonical npm version):
 `;
 
 function parseArgs(argv) {
-  const args = { command: null, port: null, host: null, dataDir: null, dryRun: false };
+  const args = { command: null, port: null, host: null, dataDir: null, dryRun: false, daemon: false };
   const rest = [...argv];
   const first = rest[0];
   if (first && !first.startsWith('-')) {
@@ -119,6 +123,16 @@ function parseArgs(argv) {
         break;
       case '--dry-run':
         args.dryRun = true;
+        break;
+      // Daemon mode: the server runs detached from this terminal (background
+      // service). The terminal returns to the prompt immediately.
+      case '--daemon':
+        args.daemon = true;
+        break;
+      // Shorthand to stop a daemon started with --daemon.
+      case '--daemon-stop':
+      case '--stop':
+        args.command = 'stop';
         break;
       case '--help':
       case '-h':
@@ -307,6 +321,131 @@ async function commandStart({ port, host, dataDir, dryRun }) {
   }
 }
 
+/** True when a pid exists (EPERM = alive but owned by another user). */
+function isPidAlive(pid) {
+  if (!pid || !Number.isInteger(Number(pid)) || Number(pid) <= 0) return false;
+  try {
+    process.kill(Number(pid), 0);
+    return true;
+  } catch (err) {
+    return err?.code === 'EPERM';
+  }
+}
+
+/**
+ * Daemon mode (0.1.16): the server runs DETACHED from the interactive
+ * terminal, so nothing the terminal does afterwards can kill it.
+ *
+ * A hostile terminal (MobaXterm wrapper, PowerShell, npx) can TerminateProcess
+ * the foreground child at any moment; a detached process with its own stdio
+ * pointed at a log file is immune to that. The terminal returns to the prompt
+ * immediately — that is the expected behaviour of a daemon.
+ */
+async function commandDaemon(args) {
+  const resolved = resolveDataDir(args.dataDir);
+  ensureDataDir(resolved);
+
+  const store = new JsonStore(resolved);
+  const info = store.read('jobfinder-daemon.json', null) ?? {};
+  if (isPidAlive(info.pid)) {
+    console.log(`JobFinder ja esta rodando em background (pid ${info.pid}).`);
+    console.log(` URL : http://${info.host ?? '127.0.0.1'}:${info.port ?? 4040}`);
+    console.log(` Log : ${info.logFile ?? path.join(resolved, 'jobfinder.log')}`);
+    console.log(` Parar: npx --yes @danhachuel/jobfinder@${NPM_VERSION} stop`);
+    return;
+  }
+
+  const port = args.port || Number(process.env.JOBFINDER_PORT) || 4040;
+  const host = args.host || process.env.JOBFINDER_HOST || '127.0.0.1';
+  const logFile = path.join(resolved, 'jobfinder.log');
+
+  printBanner();
+  fs.mkdirSync(path.dirname(logFile), { recursive: true });
+  const logFd = fs.openSync(logFile, 'a');
+
+  const child = spawn(process.execPath, [path.join(__dirname, 'cli.mjs'), 'start', '--port', String(port), '--host', host, ...(args.dryRun ? ['--dry-run'] : [])], {
+    detached: true,
+    // stdio de arquivo: o daemon NUNCA herda os pipes do terminal. Se o canalho
+    // do MobaXterm fechar, o daemon não sente — e o log fica em disco.
+    stdio: ['ignore', logFd, logFd],
+    windowsHide: true,
+    creationFlags: process.platform === 'win32' ? 0x00000200 : 0,
+    env: {
+      ...process.env,
+      JOBFINDER_MODE: 'daemon',
+      JOBFINDER_DATA_DIR: resolved,
+      JOBFINDER_PORT: String(port),
+      JOBFINDER_HOST: host,
+      JOBFINDER_VERSION: VISUAL_VERSION,
+    },
+  });
+
+  child.on('error', (err) => {
+    console.error(`[jobfinder] falha ao iniciar o daemon: ${err?.message ?? err}`);
+    process.exit(1);
+  });
+
+  // Estado do daemon via JsonStore (atômico) — nunca fs.writeFileSync solto.
+  store.write('jobfinder-daemon.json', {
+    pid: child.pid,
+    port,
+    host,
+    logFile,
+    startedAt: new Date().toISOString(),
+    version: VISUAL_VERSION,
+    mode: 'daemon',
+  });
+
+  child.unref();
+
+  const shown = host === '0.0.0.0' ? 'localhost' : host;
+  console.log(` Data directory : ${resolved}`);
+  console.log(` Mode           : daemon (background)`);
+  console.log(` URL            : http://${shown}:${port}`);
+  console.log(` PID            : ${child.pid}`);
+  console.log(` Log            : ${logFile}`);
+  console.log(`\nRodando em background — este terminal esta livre.`);
+  console.log(` Parar com: npx --yes @danhachuel/jobfinder@${NPM_VERSION} stop`);
+}
+
+/** Stop the daemon recorded in jobfinder-daemon.json (SIGTERM, then SIGKILL). */
+async function commandStop() {
+  const resolved = resolveDataDir();
+  const store = new JsonStore(resolved);
+  const info = store.read('jobfinder-daemon.json', null) ?? {};
+
+  if (!isPidAlive(info.pid)) {
+    console.log('Nenhum daemon do JobFinder rodando.');
+    store.write('jobfinder-daemon.json', { ...info, pid: null, stoppedAt: new Date().toISOString() });
+    return;
+  }
+
+  const pid = Number(info.pid);
+  console.log(`Parando o JobFinder (pid ${pid})...`);
+  try {
+    process.kill(pid, 'SIGTERM');
+  } catch (err) {
+    console.error(`[jobfinder] falha ao sinalizar o processo: ${err?.message ?? err}`);
+  }
+
+  // Espera o encerramento gracioso; força se necessário.
+  for (let i = 0; i < 20; i += 1) {
+    if (!isPidAlive(pid)) break;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  if (isPidAlive(pid)) {
+    console.error('[jobfinder] encerramento gracioso expirou — forcando (SIGKILL).');
+    try {
+      process.kill(pid, 'SIGKILL');
+    } catch {
+      /* best effort */
+    }
+  }
+
+  store.write('jobfinder-daemon.json', { ...info, pid: null, stoppedAt: new Date().toISOString() });
+  console.log('JobFinder parado.');
+}
+
 function commandVersion() {
   console.log(`JobFinder v${VISUAL_VERSION} (npm: ${NPM_VERSION})`);
   console.log(`os: ${os.type()} ${os.arch()} • node: ${process.version}`);
@@ -314,6 +453,17 @@ function commandVersion() {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+
+  // --daemon tem precedência sobre start/null, mas nunca sobre install/help/version.
+  if (args.daemon && !['install', 'help', 'version', 'stop'].includes(args.command)) {
+    await commandDaemon(args);
+    return;
+  }
+  if (args.command === 'stop') {
+    await commandStop();
+    return;
+  }
+
   switch (args.command) {
     case 'install':
       commandInstall(args);

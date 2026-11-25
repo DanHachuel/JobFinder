@@ -109,6 +109,12 @@ npx --yes @danhachuel/jobfinder@0.1.17 --port 4050     # porta customizada
 npx --yes @danhachuel/jobfinder@0.1.17 stop            # encerra
 ```
 
+> **Dica (Windows/npx):** se você já rodou uma versão antiga antes, use
+> `npx --yes --prefer-online @danhachuel/jobfinder@latest`. Sem o
+> `--prefer-online` o npx pode reaproveitar um bucket de cache antigo (com uma
+> versão defasada do CLI) em vez de baixar a latest. Instalação global
+> (`npm install -g @danhachuel/jobfinder@latest`) não tem esse problema.
+
 Saída típica:
 
 ```

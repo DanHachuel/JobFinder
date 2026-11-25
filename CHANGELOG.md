@@ -6,6 +6,13 @@ All notable changes to JobFinder are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.18] — 2026-11-25
+
+### Fixed
+
+- **UI não servida no modo daemon (`{"error":{"code":"internal_error","message":"Not Found"}}` na raiz)**: o fallback SPA usava `res.sendFile(caminhoAbsoluto)` — no **Express 5** um caminho absoluto sem a opção `root` falha com 404 "Not Found", que chegava ao handler central e era devolvido como JSON. Os assets (servidos pelo `express.static`) funcionavam, o que mascara o diagnóstico. Agora o fallback usa a forma canônica `res.sendFile('index.html', { root: UI_DIST })` — `/`, `/login`, `/configuracoes` e qualquer rota do React Router voltaram a servir o `index.html` (HTTP 200, `text/html`).
+- `src/ui/dist/` já estava no `files` do `package.json` e o `setupRuntime()` já copiava o dist para `~/.jobfinder/runtime/src/ui/dist` — a cópia não era a causa; o bug era exclusivamente do `sendFile` no Express 5.
+
 ## [0.1.17] — 2026-11-23
 
 ### Added

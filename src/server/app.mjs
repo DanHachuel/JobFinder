@@ -52,9 +52,12 @@ export function createApp({ store, logger, config, rateLimiter, dataDir }) {
   if (fs.existsSync(UI_DIST)) {
     app.use(express.static(UI_DIST, { index: false, maxAge: '1h' }));
     // SPA fallback: any other GET serves index.html.
+    // Express 5 EXIGE a opção `root`: um caminho absoluto "puro" falha com
+    // 404 "Not Found" — foi a regressão que devolvia JSON na raiz da URL
+    // enquanto os assets (servidos pelo static) funcionavam.
     app.use((req, res, next) => {
       if (req.method !== 'GET') return next();
-      res.sendFile(`${UI_DIST}/index.html`);
+      res.sendFile('index.html', { root: UI_DIST });
     });
   } else {
     app.get('/', (req, res) => {

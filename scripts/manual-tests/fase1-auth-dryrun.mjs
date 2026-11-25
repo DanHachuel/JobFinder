@@ -60,7 +60,7 @@ async function call(method, endpoint, { body, useCookie = true, raw } = {}) {
 
 const server = spawn(process.execPath, ['src/server/index.mjs'], {
   cwd: process.cwd(),
-  env: { ...process.env, JOBFINDER_HOME: HOME, JOBFINDER_PORT: String(PORT) },
+  env: { ...process.env, JOBFINDER_HOME: HOME, JOBFINDER_PORT: String(PORT), JOBFINDER_NO_WORKER: '1' },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
 server.stdout.on('data', (d) => process.stdout.write(`  [server] ${d}`));

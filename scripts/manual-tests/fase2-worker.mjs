@@ -156,7 +156,7 @@ if (strayStart.length) {
   await delay(800);
 }
 
-const cli = spawn(process.execPath, ['scripts/cli.mjs', 'start', '--port', String(PORT), '--no-open'], {
+const cli = spawn(process.execPath, ['scripts/cli.mjs', '--foreground', '--port', String(PORT), '--no-open'], {
   cwd: process.cwd(),
   env: { ...process.env, JOBFINDER_HOME: HOME, JOBFINDER_NO_OPEN: '1', JOBFINDER_WORKER_INTERVAL: '4000' },
   stdio: ['ignore', 'pipe', 'pipe'],
@@ -171,7 +171,7 @@ try {
   check('servidor respondeu na porta', up);
   const spawnedPid = await waitForWorker();
   check('processo worker.mjs foi spawnado', spawnedPid !== null && isPidAlive(spawnedPid), `pid=${spawnedPid}`);
-  check('CLI anunciou o worker', /Worker\s+:\s+automa/.test(cliOut));
+  check('worker está rodando (spawnado pelo servidor)', spawnedPid !== null && isPidAlive(spawnedPid), `pid=${spawnedPid}`);
 
   await api('POST', '/auth/login', { email: 'dan.hachuel@gmail.com', password: '123456' });
   const statusAlive = await api('GET', '/worker/status');

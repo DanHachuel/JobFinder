@@ -6,6 +6,33 @@ All notable changes to JobFinder are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.17] — 2026-11-23
+
+### Added
+
+- **Runtime permanente (`setupRuntime`)**: o código do servidor é copiado para `~/.jobfinder/runtime` (`src/server` + `src/ui/dist` + `package.json` enxuto, com marcador `.version`). A cópia só é refeita quando falta o entrypoint ou quando a versão muda — atualizar de versão nunca reimplanta o resto. **O Express nunca mais sobe de dentro do cache do npx**: essa era a causa raiz do `EBUSY` no Windows (o npx renomeia/limpa o cache enquanto um processo vivo segura arquivos lá dentro).
+- **Dependências instaladas dentro do runtime**: `npm install --prefix ~/.jobfinder/runtime --omit=dev` (express, mammoth, pdfjs-dist; playwright segue opcional). O runtime é autossuficiente — nenhum symlink/junction de volta para o cache do npx, que reintroduziria o EBUSY. `NODE_OPTIONS` é removido do ambiente do npm: um preload da aplicação (`--require`, `--inspect`) não pode mais quebrar o instalador. Falha na instalação aborta o start com mensagem clara em vez de spawnar um servidor que morreria em seguida.
+- **Daemon por padrão**: `npx @danhachuel/jobfinder` (ou `jobfinder start`) sobe o servidor **destacado** (`detached: true`, `windowsHide: true`, `CREATE_NEW_PROCESS_GROUP`) com `stdio` em `~/.jobfinder/jobfinder.log` e volta ao prompt: `JobFinder iniciado em background (PID: XXXX). Acesse http://127.0.0.1:4040.` O terminal (MobaXterm, wrapper do npx, PowerShell) pode fechar sem levar o servidor junto.
+- **Lock de instância `~/.jobfinder/jobfinder.pid`**: registra PID, porta e versão. `jobfinder stop` (ou `--stop`/`--daemon-stop`) encerra por PID — `taskkill /PID /T` no Windows, grupo de processos no Unix — e ainda usa o **dono da porta** (`netstat`) como rede de segurança para lock obsoleto. Antes de subir, o launcher mata a instância anterior (evita servidores zumbis e UI nova servida por backend velho).
+- **`--foreground`**: modo de depuração que sobe o servidor do runtime preso ao terminal, com a saída encaminhada por pipe (nunca `inherit`) e Ctrl+C encerrando a árvore de processos.
+- **O servidor passou a supervisionar o worker**: desde que o servidor é o daemon, o launcher não existe mais para isso. `src/server/index.mjs` spawna `worker.mjs`, reinicia em quedas (teto de 5) e o encerra no shutdown gracioso — worker morto nunca derruba o servidor.
+- **`ecosystem.config.cjs` reescrito para 0.1.17**: o PM2 aponta para o servidor do runtime (resolvido em runtime) em vez do `cli.mjs` — um PM2 que apontasse para o launcher acharia que o app "encerrou" logo após subir, porque o launcher destaca e retorna.
+- **`scripts/start-windows.ps1` reescrito**: delega ao CLI (que já faz runtime + daemon) e apenas orquestra — detecta porta em uso, dispara, confere o `/api/health`, informa PID/log/como parar. Sem `&` e sem `Start-Process -Wait`/redirecionamento: o PowerShell ficava pendurado esperando handles do processo nativo.
+
+### Changed
+
+- **`scripts/cli.mjs` deixou de ser o servidor**: agora é launcher puro (runtime + daemon + lock). `install`, `--version`, `--help` e `stop` continuam leves; `start` passou a ser alias do daemon.
+- `stop` passa a resolver a porta pelo lock (`env > lock > 4040`), então encerra a instância certa mesmo sem `JOBFINDER_PORT` no ambiente.
+
+### Fixed
+
+- **`npm install` do runtime quebrado por preload da aplicação**: `NODE_OPTIONS` vazava para o npm (ex.: injeção de falha dos testes, `--inspect`) e instalava nada — o servidor então morria com `ERR_MODULE_NOT_FOUND: express`. O ambiente do npm é limpo e a falha agora aborta o start.
+
+### Tests
+
+- Nova suíte `scripts/manual-tests/fase6-runtime-daemon.mjs` — **40 verificações, 0 falhas**: runtime criado com `.version` correto, UI copiada, `node_modules` não copiado, **linha de comando do daemon aponta para `~/.jobfinder/runtime/src/server/index.mjs`** (prova de que não roda do cache do npx), log em disco com a versão correta, sobrevivência à morte do terminal, lock escrito, segunda execução não empilha instâncias, lock obsoleto não impede arranque, `stop` encerra e limpa, `--foreground` prende o servidor, e o **servidor spawnando o worker** (com `worker-state.json` e processo vivo).
+- Suítes adaptadas à arquitetura nova: `startup-keepalive` (38/38 — home compartilhado para instalar o runtime uma vez; eventos do worker agora são lidos do JSONL), `fase2-worker` (39/39), `fase4-npx-start` (12/12), `fase5-daemon` (22/22). Regressão completa: **228 checks, 0 falhas**.
+
 ## [0.1.16] — 2026-11-22
 
 ### Added

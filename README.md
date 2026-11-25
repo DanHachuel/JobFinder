@@ -31,15 +31,15 @@ A **background worker** (separate Node process) keeps the queues moving even wit
 Windows / CMD / MobaXterm:
 
 ```bash
-npx.cmd --yes --prefer-online @danhachuel/jobfinder@0.1.15 install
-npx.cmd --yes --prefer-online @danhachuel/jobfinder@0.1.15
+npx.cmd --yes --prefer-online @danhachuel/jobfinder@0.1.17 install
+npx.cmd --yes --prefer-online @danhachuel/jobfinder@0.1.17
 ```
 
 Normal terminal:
 
 ```bash
-npx --yes @danhachuel/jobfinder@0.1.15 install
-npx --yes @danhachuel/jobfinder@0.1.15
+npx --yes @danhachuel/jobfinder@0.1.17 install
+npx --yes @danhachuel/jobfinder@0.1.17
 ```
 
 `install` creates `~/.jobfinder/` (config, auth, channels, topics, posts, connections, dm-cascades, jobs, applications, resume, logs). It is safe to re-run: existing data is never overwritten.
@@ -54,12 +54,12 @@ The single first-run account is created in `~/.jobfinder/auth.json` on the first
 # Windows (PowerShell)
 $env:JOBFINDER_INITIAL_EMAIL = "voce@exemplo.com"
 $env:JOBFINDER_INITIAL_PASSWORD = "sua-senha-forte"
-npx --yes @danhachuel/jobfinder@0.1.15
+npx --yes @danhachuel/jobfinder@0.1.17
 
 # Linux / macOS
 JOBFINDER_INITIAL_EMAIL="voce@exemplo.com" \
 JOBFINDER_INITIAL_PASSWORD="sua-senha-forte" \
-npx --yes @danhachuel/jobfinder@0.1.15
+npx --yes @danhachuel/jobfinder@0.1.17
 ```
 
 Alternative: create the account directly in `~/.jobfinder/auth.json` (see the `user` object) before starting the app.
@@ -82,78 +82,84 @@ Alternative: create the account directly in `~/.jobfinder/auth.json` (see the `u
 ### Useful flags
 
 ```bash
-node scripts/cli.mjs start --port 3031     # custom port
-node scripts/cli.mjs start --data-dir .   # custom data directory
-node scripts/cli.mjs start --dry-run       # force dry-run
-node scripts/cli.mjs --daemon              # background (terminal fica livre)
-node scripts/cli.mjs stop                  # encerra o daemon
-node scripts/cli.mjs --version             # version info
+node scripts/cli.mjs                        # daemon (padrão): background, terminal livre
+node scripts/cli.mjs --port 3031            # porta customizada
+node scripts/cli.mjs --data-dir .           # diretório de dados customizado
+node scripts/cli.mjs --dry-run              # força o modo dry-run
+node scripts/cli.mjs --foreground           # prende ao terminal (depuração)
+node scripts/cli.mjs stop                   # encerra o daemon
+node scripts/cli.mjs --version              # versão
 ```
 
 ## Rodando como Serviço (Windows/Linux)
 
-Alguns terminais — MobaXterm, wrappers do `npx`, sessões de PowerShell — podem encerrar o
-processo filho a qualquer momento. Quando você precisa que o JobFinder **sobreviva ao
-terminal**, use uma das três formas abaixo.
+Desde a **0.1.17** o JobFinder usa **runtime permanente + daemon** (a mesma arquitetura do `@danhachuel/pandanews`):
 
-### 1. Foreground (via npx) — ideal para ver os logs
+1. **Runtime permanente** — o código do servidor é copiado para `~/.jobfinder/runtime` e as dependências de produção são instaladas lá dentro. O Express **nunca** sobe de dentro do cache do `npx`, que é o que causava o `EBUSY` no Windows (o npx renomeia/limpa o cache enquanto um processo vivo segura arquivos ali).
+2. **Daemon** — o servidor sobe destacado (`detached`, `windowsHide`) com o log em `~/.jobfinder/jobfinder.log`. O terminal volta ao prompt e pode ser fechado sem derrubar o app.
+3. **Lock de instância** — `~/.jobfinder/jobfinder.pid` registra PID/porta/versão. `stop` encerra por PID (`taskkill /PID /T`) e pelo dono da porta. Antes de subir, o launcher mata a instância anterior, então nunca há dois servidores brigando pela mesma porta.
+
+O daemon é o **comportamento padrão**: `npx @danhachuel/jobfinder` (ou `jobfinder start`) já sobe em background e devolve o prompt.
+
+### 1. Daemon padrão (recomendado)
 
 ```bash
-npx --yes @danhachuel/jobfinder@0.1.16
+npx --yes @danhachuel/jobfinder@0.1.17                 # sobe em background
+npx --yes @danhachuel/jobfinder@0.1.17 --port 4050     # porta customizada
+npx --yes @danhachuel/jobfinder@0.1.17 stop            # encerra
 ```
 
-O servidor roda neste terminal; `Ctrl+C` encerra. Perfeito para depurar, ruim para deixar
-rodando: se o terminal fechar, o app morre.
+Saída típica:
 
-### 2. Daemon nativo — `node scripts/cli.mjs --daemon`
+```
+Preparando o runtime permanente (~/.jobfinder/runtime) - o servidor não roda mais do cache do npx...
+Runtime pronto em C:\Users\voce\.jobfinder\runtime
+ Iniciando o JobFinder em background (porta 4040)...
+ Log: C:\Users\voce\.jobfinder\jobfinder.log
+JobFinder iniciado em background (PID: 12345). Acesse http://127.0.0.1:4040
+Para encerrar: npx --yes @danhachuel/jobfinder@0.1.17 stop
+```
 
-O servidor sobe **detached** do terminal, com o log em `~/.jobfinder/jobfinder.log`. O
-terminal volta ao prompt na hora.
+### 2. Foreground — `--foreground` (depuração)
+
+Sobe o servidor do runtime preso a este terminal, com a saída encaminhada. `Ctrl+C` encerra a árvore de processos. Use para diagnosticar; se o terminal fechar, o app morre.
 
 ```bash
-# pacote publicado (qualquer SO)
-npx --yes @danhachuel/jobfinder@0.1.16 --daemon --port 4040
-npx --yes @danhachuel/jobfinder@0.1.16 stop
-
-# working copy
-node scripts/cli.mjs --daemon --port 4040
-node scripts/cli.mjs stop
+npx --yes @danhachuel/jobfinder@0.1.17 --foreground
+node scripts/cli.mjs --foreground --port 4040
 ```
 
 ### 3. Script nativo do Windows — `scripts\start-windows.ps1`
 
-Duplo clique ou PowerShell: detecta porta em uso, sobe o daemon, confere o `/api/health` e
-informa o PID e o caminho do log.
+Duplo clique ou PowerShell: detecta porta em uso, dispara o CLI (que prepara o runtime e sobe o daemon), confere o `/api/health` e informa PID, runtime e log.
 
 ```powershell
 .\scripts\start-windows.ps1                       # versão latest do npm
-.\scripts\start-windows.ps1 -Version 0.1.16       # versão fixa
-.\scripts\start-windows.ps1 -Local                # working copy (desenvolvimento)
-.\scripts\start-windows.ps1 -Stop                 # encerra
-.\scripts\start-windows.cmd                       # wrapper para duplo clique
+.\scripts\start-windows.ps1 -Version 0.1.17        # versão fixa
+.\scripts\start-windows.ps1 -Local                 # working copy (desenvolvimento)
+.\scripts\start-windows.ps1 -Stop                  # encerra
+.\scripts\start-windows.cmd                        # wrapper para duplo clique
 ```
 
 ### 4. PM2 — serviço de verdade (Windows e Linux)
 
-Reinicia em caso de crash, gerencia logs e sobrevive ao fechamento da sessão.
+Reinicia em caso de crash, gerencia logs e sobrevive ao fechamento da sessão. O `ecosystem.config.cjs` aponta para o servidor do runtime (não para o launcher, que destacaria e retornaria).
 
 ```bash
 npm i -g pm2                 # ou: npx pm2
-npm run pm2:start            # sobe (ecosystem.config.cjs)
+npm run pm2:start            # sobe
 npm run daemon:logs          # acompanha os logs
 npm run pm2:stop             # para
 ```
 
-`pm2` é dependência **opcional**: sem ela o app continua funcionando normalmente pelos
-caminhos 1–3 — a regra do projeto é executar nativamente, sem infraestrutura obrigatória.
+`pm2` é dependência **opcional**: sem ela o app continua funcionando normalmente pelos caminhos 1–3 — a regra do projeto é executar nativamente, sem infraestrutura obrigatória.
 
 | Forma | Sobrevive ao terminal? | Logs | Uso |
 |---|---|---|---|
-| Foreground (npx) | não | no terminal | depuração rápida |
-| `--daemon` | sim | `~/.jobfinder/jobfinder.log` | servidor local simples |
+| Daemon (padrão) | sim | `~/.jobfinder/jobfinder.log` | servidor local, o caso comum |
+| `--foreground` | não | no terminal | depuração rápida |
 | `start-windows.ps1` | sim | `~/.jobfinder/jobfinder.log` | Windows, duplo clique |
 | PM2 | sim (reinicia) | `pm2 logs` | serviço de longo prazo |
-
 ## Screenshots
 
 > Painel, Postagens, Conexões, Cascatas de DM, Vagas, Candidaturas, Integrações e Configurações — see the walkthrough in the app header (**Ver tutorial**) or open the app to explore in dry-run mode. Screenshots are published with each release in the GitHub Releases.
@@ -174,6 +180,9 @@ caminhos 1–3 — a regra do projeto é executar nativamente, sem infraestrutur
 ├── resume.json          # parsed resume
 ├── worker-state.json    # background worker: heartbeat, fila ativa, últimas ações
 ├── worker-control.json  # estado desejado do worker (running | paused)
+├── jobfinder.log        # log do daemon (stdout/stderr do servidor)
+├── jobfinder.pid        # lock da instância: PID, porta, versão
+├── runtime/             # RUNTIME PERMANENTE: código do servidor + node_modules
 └── logs/YYYY-MM-DD.jsonl
 ```
 
@@ -197,6 +206,8 @@ node scripts/manual-tests/fase1-ui-e2e.mjs             # UI (Playwright): login,
 node scripts/manual-tests/fase2-worker.mjs             # worker: spawn, filas, limite de DMs, órfãos, estresse
 node scripts/manual-tests/fase3-seed-env.mjs           # segurança: seed por env, nenhuma credencial exposta
 node scripts/manual-tests/fase4-npx-start.mjs          # npx/cwd estranho: versão correta, processo vivo, HTTP 200
+node scripts/manual-tests/fase5-daemon.mjs             # daemon: runtime, PID, log, stop, sem duplicar
+node scripts/manual-tests/fase6-runtime-daemon.mjs     # runtime permanente: daemon do runtime, lock, worker
 node scripts/manual-tests/startup-keepalive.mjs        # runtime: boot, unhandledRejection, EPIPE, sinais
 node --test tests/*.js                                # contratos/concorrência/UI (stubs por enquanto)
 ```

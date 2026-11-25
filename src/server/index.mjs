@@ -18,6 +18,7 @@ import { createRequire } from 'node:module';
 import { createApp } from './app.mjs';
 import { createContext } from './context.mjs';
 import { resolveDataDir, UI_DIST } from './paths.mjs';
+import { spawnWorker } from './workerRuntime.mjs';
 
 /** ESM-safe package.json reader: resolved from THIS file, never from cwd. */
 const require = createRequire(import.meta.url);
@@ -169,11 +170,43 @@ export async function start() {
   });
 
   // Time-based automation (scheduled posts, DM cascades, inbox monitoring)
-  // runs in the standalone background worker process (src/server/worker.mjs),
-  // spawned by the launcher or by POST /api/worker/start. Keeping it out of
-  // this process means closing the browser never pauses the automations.
-
+  // runs in the standalone background worker process (src/server/worker.mjs).
+  // Desde a 0.1.17 o servidor É o daemon: o launcher já morreu, então quem
+  // spawna e supervisiona o worker é este processo.
   let shuttingDown = false;
+  let worker = null;
+  let workerRestarts = 0;
+
+  const startWorker = () => {
+    // JOBFINDER_TAKEOVER: o servidor acabou de subir — heartbeat velha de pid
+    // reciclado não pode bloquear este spawn.
+    worker = spawnWorker({ env: { JOBFINDER_DATA_DIR: dataDir, JOBFINDER_TAKEOVER: '1' } });
+    worker.on('exit', (code, signal) => {
+      const reason = signal ? `signal ${signal}` : `code ${code}`;
+      logger.warn('worker', `worker encerrou (${reason})`, { restarts: workerRestarts });
+      // Worker morto NUNCA derruba o servidor: só reinicia (com teto).
+      if (!shuttingDown && workerRestarts < 5) {
+        workerRestarts += 1;
+        setTimeout(startWorker, 3000).unref();
+      }
+    });
+    logger.info('worker', 'worker iniciado pelo servidor', { pid: worker.pid });
+  };
+
+  const stopWorker = () => {
+    if (worker && worker.exitCode === null && worker.signalCode === null) {
+      worker.kill('SIGTERM');
+      setTimeout(() => {
+        if (worker.exitCode === null && worker.signalCode === null) worker.kill('SIGKILL');
+      }, 2000).unref();
+    }
+  };
+
+  if (process.env.JOBFINDER_NO_WORKER === '1') {
+    logger.info('worker', 'worker desativado por JOBFINDER_NO_WORKER=1');
+  } else {
+    startWorker();
+  }
 
   /**
    * ULTIMATE keep-alive guard (0.1.15).
@@ -209,6 +242,12 @@ export async function start() {
     if (shuttingDown) return;
     shuttingDown = true;
     logger.info('shutdown', `received ${signal}`);
+    // O worker morre com o servidor — nunca fica órfão.
+    try {
+      stopWorker();
+    } catch {
+      /* parar o worker é melhor esforço */
+    }
     server.close(() => process.exit(0));
     // Never hang on a stuck keep-alive connection: force the exit.
     setTimeout(() => process.exit(0), 3000).unref();

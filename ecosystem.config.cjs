@@ -1,30 +1,40 @@
 /**
  * PM2 — JobFinder como serviço de background real (Windows e Linux).
  *
- *   npm i -g pm2            # ou: npx pm2
- *   npm run start:daemon    # sobe
- *   npm run daemon:logs     # acompanha
- *   npm run daemon:stop     # para
+ *   npm i -g pm2             # ou: npx pm2
+ *   npm run pm2:start        # sobe
+ *   npm run daemon:logs      # acompanha
+ *   npm run pm2:stop         # para
  *
- * O CLI continua sendo o entrypoint: toda a supervisão do worker, os sinais
- * e o keep-alive do event loop são os mesmos do modo foreground. O PM2 apenas
- * garante que o processo sobreviva ao fechamento do terminal e reinicia em
- * caso de crash.
+ * ATENÇÃO (0.1.17): `scripts/cli.mjs` agora é o LAUNCHER — ele copia o runtime
+ * permanente para ~/.jobfinder/runtime, sobe o servidor DESTACADO e retorna.
+ * Um PM2 que apontasse para o launcher acharia que o app "encerrou" logo após
+ * subir. Por isso o PM2 roda o servidor do runtime em `--foreground`: o PM2
+ * supervisiona um processo de vida longa, e o `stop` do CLI continua sendo o
+ * caminho manual.
+ *
+ * O script é resolvido em runtime: o launcher garante que o runtime exista.
  */
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+
+const home = process.env.JOBFINDER_HOME || process.env.JOBFINDER_DATA_DIR || path.join(os.homedir(), '.jobfinder');
+const runtimeServer = path.join(home, 'runtime', 'src', 'server', 'index.mjs');
+const repoServer = path.resolve(__dirname, 'src', 'server', 'index.mjs');
+const script = fs.existsSync(runtimeServer) ? runtimeServer : repoServer;
+
 module.exports = {
   apps: [
     {
       name: 'jobfinder',
-      script: 'scripts/cli.mjs',
+      script,
       interpreter: 'node',
-      // Modo serviço: não trava o terminal e sobrevive ao fechamento da sessão.
       instances: 1,
       exec_mode: 'fork',
       autorestart: true,
       max_restarts: 10,
       restart_delay: 3000,
-      // Logs por processo fiquem em ~/.jobfinder (o PM2 gerencia os seus em
-      // ~/.pm2/logs; aqui o app escreve o log de aplicação).
       out_file: null,
       error_file: null,
       env: {

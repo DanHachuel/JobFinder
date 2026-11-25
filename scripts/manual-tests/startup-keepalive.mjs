@@ -57,13 +57,27 @@ function getStatus(port, urlPath) {
   });
 }
 
+// Home compartilhado: o runtime permanente (~/.jobfinder/runtime) é instalado
+// uma única vez e reaproveitado por todas as seções — cada home novo pagaria
+// ~20s de npm install e o teste mediria o instalador, não o keep-alive.
+const SHARED_HOME = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'jobfinder-keepalive-')), 'data');
+// Diretório dos arquivos de injeção (preloads) das seções de falha.
+const PRELOAD_DIR = path.join(SHARED_HOME, 'preloads');
+fs.mkdirSync(PRELOAD_DIR, { recursive: true });
+
 const dead = (child) => child.exitCode !== null || child.signalCode !== null;
+
+/** Texto do log JSONL diário de um home (onde o logger escreve). */
+const jsonlNow = (home) => {
+  const day = new Date().toISOString().slice(0, 10);
+  const file = path.join(home, 'logs', `${day}.jsonl`);
+  return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+};
 
 /** Sobe o app e observa por `observeMs` sem enviar nenhum sinal. */
 async function bootAndObserve(label, { args, port, observeMs, env = {} }) {
   console.log(`\n== ${label} ==`);
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jobfinder-keepalive-'));
-  const home = path.join(tmp, 'data');
+  const home = SHARED_HOME;
   const child = spawn(process.execPath, args, {
     cwd: ROOT,
     env: { ...process.env, JOBFINDER_PORT: String(port), JOBFINDER_DATA_DIR: home, JOBFINDER_NO_OPEN: '1', ...env },
@@ -79,12 +93,39 @@ async function bootAndObserve(label, { args, port, observeMs, env = {} }) {
   return { child, out, home };
 }
 
+// 0) AQUECIMENTO: o runtime permanente é preparado uma vez. Desde a 0.1.17 o
+// launcher copia o código e instala as dependências antes de subir o servidor
+// — sem este passo cada seção pagaria ~20s de npm install e o teste mediria o
+// instalador, não o keep-alive.
+{
+  console.log('\n== aquecimento do runtime permanente ==');
+  const warm = spawn(process.execPath, [path.join(ROOT, 'scripts', 'cli.mjs'), '--daemon'], {
+    cwd: ROOT,
+    env: { ...process.env, JOBFINDER_HOME: SHARED_HOME, JOBFINDER_NO_WORKER: '1' },
+    stdio: ['ignore', 'ignore', 'ignore'],
+  });
+  await new Promise((resolve) => {
+    warm.on('exit', () => resolve());
+    setTimeout(resolve, 120000);
+  });
+  const warmSrv = spawn(process.execPath, [path.join(ROOT, 'scripts', 'cli.mjs'), 'stop'], {
+    cwd: ROOT,
+    env: { ...process.env, JOBFINDER_HOME: SHARED_HOME },
+    stdio: 'ignore',
+  });
+  await new Promise((resolve) => {
+    warmSrv.on('exit', () => resolve());
+    setTimeout(resolve, 30000);
+  });
+  console.log(`  OK   runtime preparado em ${path.join(SHARED_HOME, 'runtime')}`);
+}
+
 // 1) launcher: o terminal precisa ficar preso rodando o servidor
 {
-  const { child } = await bootAndObserve('boot via launcher (node scripts/cli.mjs start)', {
-    args: [path.join(ROOT, 'scripts', 'cli.mjs'), 'start', '--no-open'],
+  const { child } = await bootAndObserve('boot via launcher (node scripts/cli.mjs --foreground)', {
+    args: [path.join(ROOT, 'scripts', 'cli.mjs'), '--foreground'],
     port: 4181,
-    observeMs: 9000,
+    observeMs: 12000,
   });
   child.kill();
   await wait(5000);
@@ -103,8 +144,8 @@ async function bootAndObserve(label, { args, port, observeMs, env = {} }) {
 
   // Sinal emitido dentro do processo (preload): os handlers graceful rodam
   // em qualquer plataforma — no Windows, child.kill() vira TerminateProcess.
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jobfinder-keepalive-sig-'));
-  const home = path.join(tmp, 'data');
+  const home = SHARED_HOME;
+    const tmp = PRELOAD_DIR;
   const preload = path.join(tmp, 'sigterm.cjs');
   fs.writeFileSync(preload, "setTimeout(() => process.emit('SIGTERM'), 8000);\n");
   const second = spawn(process.execPath, [path.join(ROOT, 'src', 'server', 'index.mjs')], {
@@ -119,17 +160,17 @@ async function bootAndObserve(label, { args, port, observeMs, env = {} }) {
     : '';
   check('shutdown gracioso registrado no log', /"shutdown"/.test(logs), logs.split('\n').filter((l) => /shutdown/.test(l))[0] ?? '');
   if (second.exitCode === null && second.signalCode === null) second.kill();
-  fs.rmSync(tmp, { recursive: true, force: true });
+  /* preloads vivem em PRELOAD_DIR (compartilhado entre as seções) */
 }
 
 // 3) injeção de falha: unhandledRejection após o boot não pode matar o processo
 {
   console.log('\n== boot com unhandledRejection injetado (killer silencioso) ==');
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jobfinder-keepalive-fault-'));
-  const home = path.join(tmp, 'data');
+  const home = SHARED_HOME;
+    const tmp = PRELOAD_DIR;
   const fault = path.join(tmp, 'fault.cjs');
   fs.writeFileSync(fault, "setTimeout(() => { Promise.reject(new Error('fault-injection: unhandled rejection')); }, 1200);\n");
-  const child = spawn(process.execPath, [path.join(ROOT, 'scripts', 'cli.mjs'), 'start', '--no-open'], {
+  const child = spawn(process.execPath, [path.join(ROOT, 'scripts', 'cli.mjs'), '--foreground', '--no-open'], {
     cwd: ROOT,
     env: { ...process.env, JOBFINDER_PORT: '4183', JOBFINDER_DATA_DIR: home, JOBFINDER_NO_OPEN: '1', NODE_OPTIONS: `--require ${fault}` },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -142,16 +183,15 @@ async function bootAndObserve(label, { args, port, observeMs, env = {} }) {
   check('API responde em localhost', (await getStatus(4183, '/api/health')) === 200);
   check('rejeição foi registrada no log (não engolida em silêncio)', /unhandled promise rejection ignored/i.test(out), out.split('\n').filter((l) => /rejection/i.test(l))[0] ?? '');
   child.kill();
-  fs.rmSync(tmp, { recursive: true, force: true });
+  /* preloads vivem em PRELOAD_DIR (compartilhado entre as seções) */
 }
 
 // 4) stdout quebrado (EPIPE) — ex.: pipe fechado, terminal que some,
 //    redirecionamento no Windows/MobaXterm. Não pode matar o processo.
 {
   console.log('\n== boot com stdout fechado (EPIPE) ==');
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jobfinder-keepalive-epipe-'));
-  const home = path.join(tmp, 'data');
-  const child = spawn(process.execPath, [path.join(ROOT, 'scripts', 'cli.mjs'), 'start', '--no-open'], {
+  const home = SHARED_HOME;
+  const child = spawn(process.execPath, [path.join(ROOT, 'scripts', 'cli.mjs'), '--foreground', '--no-open'], {
     cwd: ROOT,
     env: { ...process.env, JOBFINDER_PORT: '4184', JOBFINDER_DATA_DIR: home, JOBFINDER_NO_OPEN: '1' },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -166,16 +206,15 @@ async function bootAndObserve(label, { args, port, observeMs, env = {} }) {
   check('processo sobrevive ao stdout quebrado', !dead(child), dead(child) ? `exitCode=${child.exitCode} signal=${child.signalCode}` : 'vivo');
   check('API responde em localhost', (await getStatus(4184, '/api/health')) === 200);
   child.kill();
-  fs.rmSync(tmp, { recursive: true, force: true });
+  /* preloads vivem em PRELOAD_DIR (compartilhado entre as seções) */
 }
 
 // 5) o worker sobe junto, bate heartbeat e o CLI continua vivo depois
 //    dele (regressao 0.1.7: event loop vazio matava o launcher).
 {
   console.log('\n== boot com worker: heartbeat + CLI independente do worker ==');
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jobfinder-keepalive-worker-'));
-  const home = path.join(tmp, 'data');
-  const child = spawn(process.execPath, [path.join(ROOT, 'scripts', 'cli.mjs'), 'start', '--no-open'], {
+  const home = SHARED_HOME;
+  const child = spawn(process.execPath, [path.join(ROOT, 'scripts', 'cli.mjs'), '--foreground', '--no-open'], {
     cwd: ROOT,
     env: { ...process.env, JOBFINDER_PORT: '4185', JOBFINDER_DATA_DIR: home, JOBFINDER_NO_OPEN: '1' },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -195,7 +234,14 @@ async function bootAndObserve(label, { args, port, observeMs, env = {} }) {
   await wait(3000);
   const pid0 = await workerPid();
   check('worker spawnado publicou o pid no estado', Boolean(pid0), `pid=${pid0}`);
-  check('output do launcher anuncia o worker', /Worker\s+:\s+automa/.test(out));
+  // Desde a 0.1.17 os eventos do worker são registrados pelo SERVIDOR no
+  // log diário (logs/YYYY-MM-DD.jsonl), não no stdout do launcher.
+  const jsonl = () => {
+    const day = new Date().toISOString().slice(0, 10);
+    const file = path.join(home, 'logs', `${day}.jsonl`);
+    return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+  };
+  check('servidor registrou o início do worker', /worker iniciado pelo servidor/.test(jsonl()));
 
   await wait(4000); // passa de 1 heartbeat (5s): o guardiao de orfaos rodou
   const pid1 = await workerPid();
@@ -209,26 +255,26 @@ async function bootAndObserve(label, { args, port, observeMs, env = {} }) {
   }
   await wait(2500);
   check('CLI sobrevive ao crash do worker', !dead(child), dead(child) ? `exitCode=${child.exitCode} signal=${child.signalCode}` : 'vivo');
-  check('saida do worker foi registrada no log', /worker encerrou/i.test(out), out.split('\n').filter((l) => /worker encerrou/i.test(l))[0] ?? '');
+  check('saida do worker foi registrada no log', /worker encerrou/i.test(jsonl()), jsonl().split('\n').filter((l) => /worker encerrou/i.test(l))[0]?.slice(0, 120) ?? '');
   check('servidor continua respondendo apos o crash do worker', (await getStatus(4185, '/api/health')) === 200);
 
   // O launcher supervisiona: um worker novo assume a fila.
   await wait(5000);
   const pid2 = await workerPid();
   check('launcher reiniciou o worker automaticamente', pid2 !== null && pid2 !== pid1, `antes=${pid1} depois=${pid2}`);
-  check('restart anunciado no log', /reiniciando o worker/i.test(out), out.split('\n').filter((l) => /reiniciando o worker/i.test(l))[0] ?? '');
+  check('restart do worker registrado no log', /worker iniciado pelo servidor/.test(jsonl()) && pid2 !== pid1);
   check('CLI continua vivo depois do restart', !dead(child) && (await getStatus(4185, '/api/health')) === 200);
   child.kill();
   await wait(800);
-  fs.rmSync(tmp, { recursive: true, force: true });
+  /* preloads vivem em PRELOAD_DIR (compartilhado entre as seções) */
 }
 
 // 7) worker direto: rejection injetada -> worker-error.log + processo vivo
 {
   console.log('\n== worker direto: rejection injetada e log em arquivo ==');
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jobfinder-keepalive-wrej-'));
-  const home = path.join(tmp, 'data');
+  const home = SHARED_HOME;
   ensureDataDir(home); // o worker exige o skeleton (como o launcher faz)
+  const tmp = PRELOAD_DIR;
   const fault = path.join(tmp, 'fault.cjs');
   fs.writeFileSync(fault, "setTimeout(() => { Promise.reject(new Error('fault-injection: worker rejection')); }, 1200);\n");
   const worker = spawn(process.execPath, [path.join(ROOT, 'src', 'server', 'worker.mjs')], {
@@ -251,14 +297,13 @@ async function bootAndObserve(label, { args, port, observeMs, env = {} }) {
   check('falha tambem apareceu no console', /unhandled promise rejection ignored/i.test(out));
   worker.kill();
   await wait(800);
-  fs.rmSync(tmp, { recursive: true, force: true });
+  /* preloads vivem em PRELOAD_DIR (compartilhado entre as seções) */
 }
 
 // 8) worker direto: stdout/stderr quebrados (EPIPE) -> worker segue vivo
 {
   console.log('\n== worker direto: EPIPE nos pipes ==');
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jobfinder-keepalive-wepipe-'));
-  const home = path.join(tmp, 'data');
+  const home = SHARED_HOME;
   ensureDataDir(home); // o worker exige o skeleton (como o launcher faz)
   const worker = spawn(process.execPath, [path.join(ROOT, 'src', 'server', 'worker.mjs')], {
     cwd: ROOT,
@@ -281,7 +326,7 @@ async function bootAndObserve(label, { args, port, observeMs, env = {} }) {
   check('heartbeat continua sendo publicado sem o console', Boolean(state?.pid) && state.pid === worker.pid, `pid=${state?.pid}`);
   worker.kill();
   await wait(800);
-  fs.rmSync(tmp, { recursive: true, force: true });
+  /* preloads vivem em PRELOAD_DIR (compartilhado entre as seções) */
 }
 
 // 9) worker direto: rename SEMPRE EPERM (antivirus/arquivo travado no
@@ -289,9 +334,9 @@ async function bootAndObserve(label, { args, port, observeMs, env = {} }) {
 //    escrita é tentada de novo no próximo tick/heartbeat.
 {
   console.log('\n== worker direto: EPERM no rename (arquivo travado) ==');
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jobfinder-keepalive-wperm-'));
-  const home = path.join(tmp, 'data');
+  const home = SHARED_HOME;
   ensureDataDir(home);
+    const tmp = PRELOAD_DIR;
   const sabotage = path.join(tmp, 'eperm.cjs');
   fs.writeFileSync(
     sabotage,
@@ -326,15 +371,14 @@ async function bootAndObserve(label, { args, port, observeMs, env = {} }) {
   check('worker-state write failed registrado (não engolido em silêncio)', /worker-state write failed/i.test(errorLog));
   worker.kill();
   await wait(800);
-  fs.rmSync(tmp, { recursive: true, force: true });
+  /* preloads vivem em PRELOAD_DIR (compartilhado entre as seções) */
 }
 
 // 6) JOBFINDER_NO_WORKER=1: modo sem worker, CLI continua vivo
 {
   console.log('\n== boot sem worker (JOBFINDER_NO_WORKER=1) ==');
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jobfinder-keepalive-noworker-'));
-  const home = path.join(tmp, 'data');
-  const child = spawn(process.execPath, [path.join(ROOT, 'scripts', 'cli.mjs'), 'start', '--no-open'], {
+  const home = SHARED_HOME;
+  const child = spawn(process.execPath, [path.join(ROOT, 'scripts', 'cli.mjs'), '--foreground', '--no-open'], {
     cwd: ROOT,
     env: { ...process.env, JOBFINDER_PORT: '4187', JOBFINDER_DATA_DIR: home, JOBFINDER_NO_OPEN: '1', JOBFINDER_NO_WORKER: '1' },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -344,11 +388,11 @@ async function bootAndObserve(label, { args, port, observeMs, env = {} }) {
   child.stderr.on('data', (d) => { out += String(d); });
   await wait(6000);
   check('CLI continua rodando sem worker', !dead(child), dead(child) ? `exitCode=${child.exitCode} signal=${child.signalCode}` : 'vivo');
-  check('nenhum worker foi spawnado', /Worker\s+:\s+disabled/.test(out));
+  check('nenhum worker foi spawnado (desativado no log do servidor)', /desativado por JOBFINDER_NO_WORKER/.test(jsonlNow(home)), jsonlNow(home).split('\n').filter((l) => /JOBFINDER_NO_WORKER/.test(l))[0]?.slice(0, 120) ?? '');
   check('API responde em localhost', (await getStatus(4187, '/api/health')) === 200);
   child.kill();
   await wait(800);
-  fs.rmSync(tmp, { recursive: true, force: true });
+  /* preloads vivem em PRELOAD_DIR (compartilhado entre as seções) */
 }
 
 // 10) ARQUITETURA 0.1.13: servidor DENTRO do processo do CLI + ambiente
@@ -357,9 +401,8 @@ async function bootAndObserve(label, { args, port, observeMs, env = {} }) {
 //     o processo vivo e respondendo HTTP 200 — e o worker é reiniciado.
 {
   console.log('\n== ambiente hostil: stdout destruído + worker morto (servidor embutido) ==');
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jobfinder-keepalive-hostil-'));
-  const home = path.join(tmp, 'data');
-  const child = spawn(process.execPath, [path.join(ROOT, 'scripts', 'cli.mjs'), 'start', '--no-open'], {
+  const home = SHARED_HOME;
+  const child = spawn(process.execPath, [path.join(ROOT, 'scripts', 'cli.mjs'), '--foreground', '--no-open'], {
     cwd: ROOT,
     env: { ...process.env, JOBFINDER_PORT: '4190', JOBFINDER_DATA_DIR: home, JOBFINDER_NO_OPEN: '1' },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -400,7 +443,7 @@ async function bootAndObserve(label, { args, port, observeMs, env = {} }) {
   check('worker foi reiniciado pelo launcher', pid1 !== null && pid1 !== pid0, `antes=${pid0} depois=${pid1}`);
   child.kill();
   await wait(800);
-  fs.rmSync(tmp, { recursive: true, force: true });
+  /* preloads vivem em PRELOAD_DIR (compartilhado entre as seções) */
 }
 
 console.log(`\nResultado: ${passed} passaram, ${failed} falharam.`);

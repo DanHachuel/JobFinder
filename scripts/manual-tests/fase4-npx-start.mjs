@@ -52,13 +52,13 @@ if (REMOTE_VERSION) {
 
 // `shell: true` é obrigatório no Windows para spawnar um .cmd (npx.cmd).
 const npx = REMOTE_VERSION
-  ? spawn(`npx --yes @danhachuel/jobfinder@${REMOTE_VERSION} start --port ${PORT}`, {
+  ? spawn(`npx --yes @danhachuel/jobfinder@${REMOTE_VERSION} --foreground --port ${PORT}`, {
       cwd: FOREIGN_CWD,
       shell: true,
       env: { ...process.env, JOBFINDER_HOME: HOME, JOBFINDER_NO_WORKER: '1' },
       stdio: ['ignore', 'pipe', 'pipe'],
     })
-  : spawn(process.execPath, [path.join(REPO_ROOT, 'scripts', 'cli.mjs'), 'start', '--port', String(PORT)], {
+  : spawn(process.execPath, [path.join(REPO_ROOT, 'scripts', 'cli.mjs'), '--foreground', '--port', String(PORT)], {
       cwd: FOREIGN_CWD,
       env: { ...process.env, JOBFINDER_HOME: HOME, JOBFINDER_NO_WORKER: '1' },
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -149,7 +149,7 @@ try { direct.kill('SIGKILL'); } catch { /* já morreu */ }
 // really roda) — o worker não pode derrubar o launcher.
 // ------------------------------------------------------------------ *
 console.log('\n== caminho padrão com worker ativo ==');
-const full = spawn(process.execPath, [path.join(REPO_ROOT, 'scripts', 'cli.mjs'), 'start', '--port', String(PORT + 2)], {
+const full = spawn(process.execPath, [path.join(REPO_ROOT, 'scripts', 'cli.mjs'), '--foreground', '--port', String(PORT + 2)], {
   cwd: FOREIGN_CWD,
   env: { ...process.env, JOBFINDER_HOME: HOME },
   stdio: ['ignore', 'pipe', 'pipe'],
@@ -168,7 +168,16 @@ check('app completo (com worker) respondeu HTTP', fullHttp);
 await delay(6000);
 check('app completo continua vivo', full.exitCode === null && full.signalCode === null, `exitCode=${full.exitCode} signal=${full.signalCode}`);
 const workerPids = fullOut.split('\n').filter((l) => l.includes('Worker')).slice(0, 1).join('');
-check('worker foi anunciado', /Worker\s+:/.test(fullOut), workerPids.trim());
+// Desde a 0.1.17 o worker é spawnado pelo SERVIDOR (não pelo launcher): a
+  // prova é o processo vivo + o registro em worker-state.json.
+  const workerPid = (() => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(HOME, 'worker-state.json'), 'utf8')).pid ?? null;
+    } catch {
+      return null;
+    }
+  })();
+  check('worker está rodando (spawnado pelo servidor)', workerPid !== null && workerPid > 0, `pid=${workerPid}`);
 try { full.kill('SIGTERM'); } catch { /* já morreu */ }
 await delay(3000);
 try { full.kill('SIGKILL'); } catch { /* já morreu */ }

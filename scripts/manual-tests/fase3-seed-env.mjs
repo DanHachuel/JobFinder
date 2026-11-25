@@ -63,6 +63,7 @@ const server = spawn(process.execPath, ['src/server/index.mjs'], {
     JOBFINDER_PORT: String(PORT),
     JOBFINDER_INITIAL_EMAIL: ENV_EMAIL,
     JOBFINDER_INITIAL_PASSWORD: ENV_PASSWORD,
+    JOBFINDER_NO_WORKER: '1',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 });

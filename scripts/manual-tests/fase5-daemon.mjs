@@ -1,15 +1,15 @@
 /**
- * Modo daemon (0.1.16): o servidor sobrevive ao terminal.
+ * Modo daemon (0.1.17): runtime permanente + daemon (arquitetura PandaNews).
  *
- *   1. `--daemon` volta ao prompt IMEDIATO (processo pai sai com código 0)
- *   2. o servidor continua vivo em background, detached do terminal
- *   3. responde HTTP 200
- *   4. o log em ~/.jobfinder/jobfinder.log tem o banner e a versão correta
- *   5. `stop` encerra o daemon (HTTP falha depois)
- *   6. rodar duas vezes não duplica (detecta o pid ativo)
- *   7. matar o terminal não mata o daemon (o teste simula: o PAI morre)
+ *   1. `--daemon` (agora o PADRÃO) volta ao prompt imediatamente
+ *   2. o servidor continua vivo em background, a partir do runtime permanente
+ *   3. responde HTTP 200 e grava o log em ~/.jobfinder/jobfinder.log
+ *   4. o lock ~/.jobfinder/jobfinder.pid registra a instância
+ *   5. rodar duas vezes não duplica (mata a anterior)
+ *   6. `stop` encerra o daemon e limpa o lock
  *
  * Uso: node scripts/manual-tests/fase5-daemon.mjs
+ * Nota: a cobertura completa do runtime está em fase6-runtime-daemon.mjs.
  */
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -47,8 +47,7 @@ function isAlive(pid) {
 
 function daemonPid() {
   try {
-    const info = JSON.parse(fs.readFileSync(path.join(HOME, 'jobfinder-daemon.json'), 'utf8'));
-    return info.pid ?? null;
+    return JSON.parse(fs.readFileSync(path.join(HOME, 'jobfinder.pid'), 'utf8')).pid ?? null;
   } catch {
     return null;
   }
@@ -79,20 +78,20 @@ launcher.stderr.on('data', (d) => { launcherOut += String(d); });
 
 const launcherExit = await new Promise((resolve) => {
   launcher.on('exit', (code) => resolve(code));
-  setTimeout(() => resolve(null), 20000);
+  setTimeout(() => resolve(null), 120000);
 });
 const elapsed = Date.now() - started;
 check('launcher saiu com código 0', launcherExit === 0, `code=${launcherExit}`);
-check('launcher voltou ao prompt rápido (<8s)', elapsed < 8000, `${elapsed}ms`);
-check('saída informa PID e log', /PID\s+:\s+\d+/.test(launcherOut) && /jobfinder\.log/.test(launcherOut));
+check('launcher voltou ao prompt rápido (<60s, inclui preparar o runtime)', elapsed < 60000, `${elapsed}ms`);
+check('saída informa PID e URL', /iniciado em background \(PID: \d+\)/.test(launcherOut) && /http:\/\/127\.0\.0\.1:\d+/.test(launcherOut));
 
 console.log('\n== 2. Daemon vivo em background ==');
 const pid = daemonPid();
-check('pid do daemon registrado', pid !== null && pid > 0, `pid=${pid}`);
+check('pid do daemon registrado no lock', pid !== null && pid > 0, `pid=${pid}`);
 check('processo do daemon está rodando', isAlive(pid));
 
 let httpData = null;
-for (let i = 0; i < 30; i += 1) {
+for (let i = 0; i < 40; i += 1) {
   httpData = await health();
   if (httpData) break;
   await delay(500);
@@ -104,15 +103,11 @@ console.log('\n== 3. Log em disco ==');
 const logFile = path.join(HOME, 'jobfinder.log');
 check('arquivo de log existe', fs.existsSync(logFile));
 const logContent = fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : '';
-check('log tem o banner de startup', /JobFinder v0\.1\.\d+/.test(logContent));
+check('log tem o banner do servidor', new RegExp('JobFinder v0\\.1\\.\\d+').test(logContent));
 check('log NÃO tem versão 0.0.00', !logContent.includes('0.0.00'));
-check('log registra o worker/porta', logContent.length > 50, `${logContent.length} bytes`);
+check('runtime permanente existe', fs.existsSync(path.join(HOME, 'runtime', 'src', 'server', 'index.mjs')));
 
-console.log('\n== 4. Sobrevive à morte do terminal (o launcher já morreu) ==');
-check('launcher (terminal) já saiu', launcherExit === 0);
-check('daemon continua vivo depois que o terminal morreu', isAlive(pid) && (await health())?.ok === true);
-
-console.log('\n== 5. Rodar duas vezes não duplica ==');
+console.log('\n== 4. Rodar duas vezes não duplica ==');
 const second = spawn(process.execPath, [...CLI, '--daemon', '--port', String(PORT)], {
   cwd: os.tmpdir(),
   env: { ...process.env, JOBFINDER_HOME: HOME, JOBFINDER_NO_WORKER: '1' },
@@ -122,12 +117,16 @@ let secondOut = '';
 second.stdout.on('data', (d) => { secondOut += String(d); });
 const secondExit = await new Promise((resolve) => {
   second.on('exit', (code) => resolve(code));
-  setTimeout(() => resolve(null), 15000);
+  setTimeout(() => resolve(null), 120000);
 });
-check('segunda execução detecta o daemon ativo', secondExit === 0 && /ja esta rodando/.test(secondOut), secondOut.split('\n')[0] ?? '');
-check('pid continua o mesmo (não duplicou)', daemonPid() === pid);
+check('segunda execução volta ao prompt', secondExit === 0, `code=${secondExit}`);
+check('segunda execução detecta/substitui a instância', /iniciado em background/.test(secondOut) || /ja esta rodando/.test(secondOut), secondOut.split('\n')[0] ?? '');
+const pid2 = daemonPid();
+check('lock aponta para uma única instância', isAlive(pid2) && (await health())?.ok === true);
+check('pid anterior não está mais vivo', !isAlive(pid) || pid === pid2, `antigo=${pid} novo=${pid2}`);
+check('servidor responde depois do restart', (await health())?.ok === true);
 
-console.log('\n== 6. stop encerra o daemon ==');
+console.log('\n== 5. stop encerra o daemon ==');
 const stop = spawn(process.execPath, [...CLI, 'stop'], {
   cwd: os.tmpdir(),
   env: { ...process.env, JOBFINDER_HOME: HOME },
@@ -137,17 +136,17 @@ let stopOut = '';
 stop.stdout.on('data', (d) => { stopOut += String(d); });
 const stopExit = await new Promise((resolve) => {
   stop.on('exit', (code) => resolve(code));
-  setTimeout(() => resolve(null), 20000);
+  setTimeout(() => resolve(null), 60000);
 });
+const stopAll = stopOut; // lido após o exit
 check('stop saiu com código 0', stopExit === 0, `code=${stopExit}`);
-check('stop informa que parou', /parado/i.test(stopOut), stopOut.split('\n')[0] ?? '');
+check('stop informa o encerramento', /encerrado|Nenhuma instância/i.test(stopAll), stopAll.split('\n')[0] ?? '');
 await delay(1500);
-check('processo do daemon não existe mais', !isAlive(pid));
-const afterStop = await health();
-check('HTTP não responde mais', afterStop === null);
-check('pid foi limpo no registro', daemonPid() === null, `pid=${daemonPid()}`);
+check('lock foi limpo', daemonPid() === null, `pid=${daemonPid()}`);
+check('porta não responde mais', (await health()) === null);
+check('processo do daemon não existe mais', !isAlive(pid2));
 
-console.log('\n== 7. stop sem daemon não quebra ==');
+console.log('\n== 6. stop sem daemon não quebra ==');
 const stopAgain = spawn(process.execPath, [...CLI, 'stop'], {
   cwd: os.tmpdir(),
   env: { ...process.env, JOBFINDER_HOME: HOME },
@@ -157,12 +156,9 @@ let stopAgainOut = '';
 stopAgain.stdout.on('data', (d) => { stopAgainOut += String(d); });
 const stopAgainExit = await new Promise((resolve) => {
   stopAgain.on('exit', (code) => resolve(code));
-  setTimeout(() => resolve(null), 15000);
+  setTimeout(() => resolve(null), 30000);
 });
 check('stop sem daemon roda limpo', stopAgainExit === 0, stopAgainOut.split('\n')[0] ?? '');
-
-// Limpeza de segurança
-try { spawn(process.execPath, [...CLI, 'stop'], { cwd: os.tmpdir(), env: { ...process.env, JOBFINDER_HOME: HOME } }); } catch { /* ignore */ }
 
 console.log(`\nResultado: ${passed} passaram, ${failed} falharam.`);
 process.exit(failed ? 1 : 0);

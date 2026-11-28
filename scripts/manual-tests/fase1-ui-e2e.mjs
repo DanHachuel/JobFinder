@@ -116,6 +116,67 @@ try {
   const dryBadge = page.locator('header span', { hasText: 'dry-run' });
   check('badge dry-run aparece no topo', (await dryBadge.count()) > 0);
 
+  console.log('\n== Tema light/dark (toggle no header) ==');
+  const themeButton = page.getByRole('button', { name: /Alternar para modo/ });
+  check('botão de tema está no cabeçalho', (await themeButton.count()) === 1);
+
+  const htmlTheme = () => page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+  const storedTheme = () => page.evaluate(() => window.localStorage.getItem('jobfinder_theme'));
+
+  // Tema inicial: light (ou o que o SO preferir — o teste assume light).
+  const initial = await htmlTheme();
+  check('tema inicial aplicado no <html> (data-theme)', initial === 'light' || initial === 'dark', `data-theme=${initial}`);
+
+  // Alterna para o oposto do inicial.
+  await themeButton.click();
+  await page.waitForFunction(
+    (expected) => document.documentElement.getAttribute('data-theme') === expected,
+    initial === 'dark' ? 'light' : 'dark',
+    { timeout: 5000 }
+  );
+  const toggled = await htmlTheme();
+  check('clique alterna o data-theme', toggled !== initial, `${initial} -> ${toggled}`);
+  check('preferência persiste no localStorage', (await storedTheme()) === toggled, `jobfinder_theme=${await storedTheme()}`);
+  check(
+    'title do botão descreve o próximo modo',
+    (await themeButton.getAttribute('title')) === (toggled === 'dark' ? 'Alternar para modo claro' : 'Alternar para modo escuro'),
+    await themeButton.getAttribute('title')
+  );
+
+  // Abouta o tema ao recarregar (persistência real, não só estado React).
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForSelector('aside p:has-text("dan.hachuel@gmail.com")', { timeout: 15000 });
+  check('tema sobrevive ao reload (localStorage)', (await htmlTheme()) === toggled, `data-theme=${await htmlTheme()}`);
+
+  // Contraste: no escuro o app usa fundo escuro; no light, claro.
+  const bgColor = await page.evaluate(() => {
+    const body = getComputedStyle(document.body).backgroundColor;
+    const shell = document.querySelector('div.flex.h-screen');
+    return { body, shell: shell ? getComputedStyle(shell).backgroundColor : '' };
+  });
+  if (toggled === 'dark') {
+    check(
+      'modo escuro aplica fundo escuro (body + shell)',
+      /rgb\(3, 7, 18\)|rgb\(17, 24, 39\)/.test(bgColor.body) && /rgb\(3, 7, 18\)|rgb\(17, 24, 39\)|oklch\(0\.1[0-9]/.test(bgColor.shell),
+      `body=${bgColor.body} shell=${bgColor.shell}`
+    );
+  } else {
+    check(
+      'modo claro aplica fundo claro (body + shell)',
+      /rgb\(243, 244, 246\)/.test(bgColor.body) && /rgb\(243, 244, 246\)|rgb\(229, 231, 235\)|rgb\(249, 250, 251\)|oklch\(0\.9[0-9]|oklch\(0\.96/.test(bgColor.shell),
+      `body=${bgColor.body} shell=${bgColor.shell}`
+    );
+  }
+
+  // Volta ao tema inicial para o resto do teste.
+  await themeButton.click();
+  await page.waitForFunction(
+    (expected) => document.documentElement.getAttribute('data-theme') === expected,
+    initial,
+    { timeout: 5000 }
+  );
+  check('toggle de volta ao tema original', (await htmlTheme()) === initial);
+
   console.log('\n== Configuracoes: execucao e seguranca ==');
   await page.click('aside a[href="/configuracoes"]');
   await page.waitForURL('**/configuracoes', { timeout: 8000 });

@@ -1,9 +1,9 @@
-/**
- * Login (referência visual: tela de login do ProdMaker, adaptada para a
- * identidade JobFinder — sidebar #1e1b4b, acento indigo #818cf8).
+﻿/**
+ * Login (referÃªncia visual: tela de login do ProdMaker, adaptada para a
+ * identidade JobFinder â€” sidebar #1e1b4b, acento indigo #818cf8).
  *
- * Split screen: painel de marca à esquerda (orbs + partículas, passos do
- * fluxo) e formulário à direita. Autenticação contra
+ * Split screen: painel de marca Ã  esquerda (orbs + partÃ­culas, passos do
+ * fluxo) e formulÃ¡rio Ã  direita. AutenticaÃ§Ã£o contra
  * ~/.jobfinder/auth.json (senha com hash scrypt no backend).
  */
 import React, { useState } from 'react';
@@ -63,7 +63,7 @@ export default function LoginPage() {
       await login(email.trim(), password);
       navigate(from, { replace: true });
     } catch (err) {
-      setError(err.message || 'Não foi possível entrar. Verifique o e-mail e a senha.');
+      setError(err.message || 'NÃ£o foi possÃ­vel entrar. Verifique o e-mail e a senha.');
     } finally {
       setLoading(false);
     }
@@ -97,11 +97,11 @@ export default function LoginPage() {
           </h1>
 
           <h2 className="mt-10 max-w-xl text-4xl font-bold leading-tight text-white">
-            Tudo o que você precisa para <span className="text-[#818cf8]">automatizar sua carreira</span> no LinkedIn em
-            um só lugar
+            Tudo o que vocÃª precisa para <span className="text-[#818cf8]">automatizar sua carreira</span> no LinkedIn em
+            um sÃ³ lugar
           </h2>
           <p className="mt-4 max-w-md text-lg text-white/50">
-            Menos trabalho manual, mais candidaturas certas — em um só lugar.
+            Menos trabalho manual, mais candidaturas certas â€” em um sÃ³ lugar.
           </p>
 
           <div className="mt-12 grid max-w-2xl grid-cols-4 gap-6">
@@ -120,17 +120,17 @@ export default function LoginPage() {
       </div>
 
       {/* Form panel */}
-      <div className="flex w-full flex-col justify-between overflow-y-auto bg-gray-50 p-8 lg:w-1/2">
+      <div className="flex w-full flex-col justify-between overflow-y-auto bg-gray-50 p-8 dark:bg-gray-900 lg:w-1/2">
         <div className="flex justify-end">
-          <span className="badge bg-indigo-100 text-indigo-700" title="JobFinder — automação inteligente para LinkedIn">
+          <span className="badge bg-indigo-100 text-indigo-700" title="JobFinder â€” automaÃ§Ã£o inteligente para LinkedIn">
             <Sparkles className="mr-1 h-3 w-3" />
-            automação inteligente
+            automaÃ§Ã£o inteligente
           </span>
         </div>
 
         <div className="mx-auto w-full max-w-sm">
-          <h2 className="text-2xl font-bold text-gray-800">Bem-vindo de volta!</h2>
-          <p className="mt-2 text-sm text-gray-500">Acesso ao JobFinder — informe seu e-mail e senha.</p>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Bem-vindo de volta!</h2>
+          <p className="mt-2 text-sm text-gray-500">Acesso ao JobFinder â€” informe seu e-mail e senha.</p>
 
           {error && (
             <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
@@ -170,7 +170,7 @@ export default function LoginPage() {
                   required
                   autoComplete="current-password"
                   className="input !pl-10 !pr-11"
-                  placeholder="••••••"
+                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                 />
@@ -188,17 +188,17 @@ export default function LoginPage() {
 
             <button className="btn-primary w-full" type="submit" disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-              {loading ? 'Entrando…' : 'Entrar'}
+              {loading ? 'Entrandoâ€¦' : 'Entrar'}
             </button>
           </form>
 
-          {/* Onboarding sem expor credenciais: onde o acesso inicial é definido. */}
+          {/* Onboarding sem expor credenciais: onde o acesso inicial Ã© definido. */}
           <p className="mt-6 text-xs leading-relaxed text-gray-400">
-            Acesso restrito. O usuário inicial é definido no primeiro boot por meio das variáveis{' '}
+            Acesso restrito. O usuÃ¡rio inicial Ã© definido no primeiro boot por meio das variÃ¡veis{' '}
             <code className="font-mono text-gray-500">JOBFINDER_INITIAL_EMAIL</code> e{' '}
             <code className="font-mono text-gray-500">JOBFINDER_INITIAL_PASSWORD</code>, ou diretamente em{' '}
             <code className="font-mono text-gray-500">~/.jobfinder/auth.json</code>. Recomendamos trocar a senha em
-            Configurações → Segurança após o primeiro acesso.
+            ConfiguraÃ§Ãµes â†’ SeguranÃ§a apÃ³s o primeiro acesso.
           </p>
         </div>
 
@@ -209,10 +209,10 @@ export default function LoginPage() {
             </a>
             <span className="opacity-50">|</span>
             <a className="hover:text-indigo-600" href="/legal/privacy.html" target="_blank" rel="noreferrer noopener">
-              Política de Privacidade
+              PolÃ­tica de Privacidade
             </a>
           </div>
-          <div className="mt-2">© 2026 JobFinder (DanHachuel) · dados em `~/.jobfinder/`</div>
+          <div className="mt-2">Â© 2026 JobFinder (DanHachuel) Â· dados em `~/.jobfinder/`</div>
         </div>
       </div>
     </div>

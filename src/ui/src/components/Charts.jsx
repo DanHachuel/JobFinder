@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Chart.js wrappers (LeadMaster style: horizontal bars + doughnut),
  * with the Chart.js registration performed once here.
  */
@@ -56,7 +56,7 @@ export function BarsChart({ data, color = 'rgba(99, 102, 241, 0.8)' }) {
   );
 
   if (!data.length || data.every((item) => item.value === 0)) {
-    return <p className="py-8 text-center text-xs text-gray-400">Sem dados no período.</p>;
+    return <p className="py-8 text-center text-xs text-gray-400 dark:text-gray-500">Sem dados no perÃ­odo.</p>;
   }
   return (
     <div className="chart-box">
@@ -82,18 +82,18 @@ export function DoughnutChart({ data }) {
   );
 
   if (!data.length || data.every((item) => item.value === 0)) {
-    return <p className="py-8 text-center text-xs text-gray-400">Sem dados no período.</p>;
+    return <p className="py-8 text-center text-xs text-gray-400 dark:text-gray-500">Sem dados no perÃ­odo.</p>;
   }
   return (
     <div>
       <div className="chart-box flex items-center justify-center">
         <Doughnut data={chartData} options={DOUGHNUT_OPTIONS} />
       </div>
-      <div className="mt-3 flex flex-wrap items-center justify-center gap-4 text-xs text-gray-500">
+      <div className="mt-3 flex flex-wrap items-center justify-center gap-4 text-xs text-gray-500 dark:text-gray-400">
         {data.map((item) => (
           <span key={item.label} className="flex items-center">
             <span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-            {item.label}: <strong className="ml-1 text-gray-700">{item.value}</strong>
+            {item.label}: <strong className="ml-1 text-gray-300">{item.value}</strong>
           </span>
         ))}
       </div>

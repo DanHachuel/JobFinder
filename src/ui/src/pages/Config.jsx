@@ -1,5 +1,5 @@
-/**
- * Configurações — Execução (dry-run), Segurança (senha), LLM, limites de
+﻿/**
+ * ConfiguraÃ§Ãµes â€” ExecuÃ§Ã£o (dry-run), SeguranÃ§a (senha), LLM, limites de
  * rate, servidor local e temas de postagem.
  */
 import React, { useCallback, useEffect, useState } from 'react';
@@ -57,7 +57,7 @@ export default function ConfigPage() {
       setConfig(configData.config);
       setTopics(topicsData.topics);
     } catch (err) {
-      toast.error(`Falha ao carregar configuração: ${err.message}`);
+      toast.error(`Falha ao carregar configuraÃ§Ã£o: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -71,12 +71,12 @@ export default function ConfigPage() {
     setSaving(true);
     try {
       const { llm, limits, outreach, linkedin, ...rest } = config;
-      // apiKey/official secrets stay as '***' — only send if the user retyped them.
+      // apiKey/official secrets stay as '***' â€” only send if the user retyped them.
       const payload = { ...rest, llm: { ...llm, apiKey: llm.apiKey === '***' ? '' : llm.apiKey }, limits, outreach, linkedin };
       if (!payload.llm.apiKey) delete payload.llm.apiKey;
       const result = await api.put('/config', payload);
       setConfig(result.config);
-      toast.success('Configuração salva.');
+      toast.success('ConfiguraÃ§Ã£o salva.');
       refresh?.();
     } catch (err) {
       toast.error(err.message);
@@ -93,8 +93,8 @@ export default function ConfigPage() {
       setConfig(result.config);
       toast.success(
         dryRun
-          ? 'Dry-run reativado — nenhuma ação real será enviada ao LinkedIn.'
-          : 'Modo real ativado — o JobFinder executará ações reais no LinkedIn.'
+          ? 'Dry-run reativado â€” nenhuma aÃ§Ã£o real serÃ¡ enviada ao LinkedIn.'
+          : 'Modo real ativado â€” o JobFinder executarÃ¡ aÃ§Ãµes reais no LinkedIn.'
       );
       refresh?.();
     } catch (err) {
@@ -115,7 +115,7 @@ export default function ConfigPage() {
   const changePassword = async (event) => {
     event.preventDefault();
     if (password.newPassword !== password.confirmPassword) {
-      toast.error('A nova senha e a confirmação não coincidem.');
+      toast.error('A nova senha e a confirmaÃ§Ã£o nÃ£o coincidem.');
       return;
     }
     if (password.newPassword.length < 6) {
@@ -125,7 +125,7 @@ export default function ConfigPage() {
     setSavingPassword(true);
     try {
       await api.put('/auth/password', password);
-      toast.success('Senha alterada. Use a nova senha no próximo login.');
+      toast.success('Senha alterada. Use a nova senha no prÃ³ximo login.');
       setPassword(EMPTY_PASSWORD);
     } catch (err) {
       toast.error(err.message);
@@ -134,7 +134,7 @@ export default function ConfigPage() {
     }
   };
 
-  /** Start / pause the background worker from Configurações → Execução. */
+  /** Start / pause the background worker from ConfiguraÃ§Ãµes â†’ ExecuÃ§Ã£o. */
   const controlWorker = async (action) => {
     setWorkerBusy(action);
     try {
@@ -143,7 +143,7 @@ export default function ConfigPage() {
         toast.success(result?.ok === false ? result.message : `Passe executado (${result?.result?.sent ?? 0} DM(s)).`);
       } else {
         await setWorkerRunning(action === 'start');
-        toast.success(action === 'start' ? 'Worker em execução.' : 'Worker pausado.');
+        toast.success(action === 'start' ? 'Worker em execuÃ§Ã£o.' : 'Worker pausado.');
       }
       await worker.refresh();
       refresh?.();
@@ -156,7 +156,7 @@ export default function ConfigPage() {
 
   const createTopic = async () => {
     if (!topicDraft.name.trim()) {
-      toast.error('Dê um nome ao tema.');
+      toast.error('DÃª um nome ao tema.');
       return;
     }
     try {
@@ -188,11 +188,11 @@ export default function ConfigPage() {
     }
   };
 
-  if (loading || !config) return <Spinner label="Carregando configuração…" />;
+  if (loading || !config) return <Spinner label="Carregando configuraÃ§Ã£oâ€¦" />;
 
   return (
     <div className="space-y-6">
-      {/* Execução — dry-run toggle (von Restorff: estado sempre claro) */}
+      {/* ExecuÃ§Ã£o â€” dry-run toggle (von Restorff: estado sempre claro) */}
       <div className={`card ${config.dryRun ? 'border-amber-200 bg-amber-50' : 'border-red-200 bg-red-50'}`}>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-3">
@@ -202,17 +202,17 @@ export default function ConfigPage() {
               <Zap className="mt-0.5 h-6 w-6 shrink-0 text-red-500" />
             )}
             <div>
-              <p className="text-sm font-semibold text-gray-800">
-                {config.dryRun ? 'Modo dry-run ativo' : 'Modo real ativo (ações reais)'}
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                {config.dryRun ? 'Modo dry-run ativo' : 'Modo real ativo (aÃ§Ãµes reais)'}
               </p>
               <p className="mt-1 max-w-2xl text-xs text-gray-600">
                 {config.dryRun
-                  ? 'Nenhuma chamada real ao LinkedIn é feita: postagens, convites, DMs e candidaturas são simulados. Explore o app com segurança.'
-                  : 'As automações vão agir de verdade na sua conta do LinkedIn. Respeite os limites abaixo e confira o canal conectado em Integrações.'}
+                  ? 'Nenhuma chamada real ao LinkedIn Ã© feita: postagens, convites, DMs e candidaturas sÃ£o simulados. Explore o app com seguranÃ§a.'
+                  : 'As automaÃ§Ãµes vÃ£o agir de verdade na sua conta do LinkedIn. Respeite os limites abaixo e confira o canal conectado em IntegraÃ§Ãµes.'}
               </p>
               <p className="mt-2 flex items-start gap-1.5 text-xs font-medium text-red-700">
                 <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                Ao desativar o modo Dry-run, o JobFinder executará ações reais no LinkedIn (postagens, convites, DMs e
+                Ao desativar o modo Dry-run, o JobFinder executarÃ¡ aÃ§Ãµes reais no LinkedIn (postagens, convites, DMs e
                 candidaturas). Use com responsabilidade.
               </p>
             </div>
@@ -230,23 +230,23 @@ export default function ConfigPage() {
           </div>
         </div>
         <p className="mt-3 text-[11px] text-gray-500">
-          O estado é salvo em <code className="font-mono">config.json</code> (`dryRun`) e vale para todo o backend —
+          O estado Ã© salvo em <code className="font-mono">config.json</code> (`dryRun`) e vale para todo o backend â€”
           inclusive o scheduler e as cascatas de DM.
         </p>
 
         {/* Background worker controls */}
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-4">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-4 dark:border-gray-800">
           <div>
-            <p className="text-xs font-semibold text-gray-700">
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
               Worker em segundo plano:{' '}
               <span className={worker.status?.isRunning ? 'text-green-700' : worker.status?.status === 'paused' ? 'text-amber-700' : 'text-gray-600'}>
-                {worker.status?.isRunning ? 'em execução' : worker.status?.status === 'paused' ? 'pausado' : 'parado'}
+                {worker.status?.isRunning ? 'em execuÃ§Ã£o' : worker.status?.status === 'paused' ? 'pausado' : 'parado'}
               </span>
-              {worker.status?.activeTask ? ` · ${worker.status.activeTask}` : ''}
+              {worker.status?.activeTask ? ` Â· ${worker.status.activeTask}` : ''}
             </p>
             <p className="mt-0.5 text-[11px] text-gray-500">
-              Próxima verificação {worker.status?.nextTickAt ? relativeTime(worker.status.nextTickAt) : '—'} ·{' '}
-              {worker.status?.stats?.ticks ?? 0} passes · {worker.status?.stats?.postsPublished ?? 0} posts ·{' '}
+              PrÃ³xima verificaÃ§Ã£o {worker.status?.nextTickAt ? relativeTime(worker.status.nextTickAt) : 'â€”'} Â·{' '}
+              {worker.status?.stats?.ticks ?? 0} passes Â· {worker.status?.stats?.postsPublished ?? 0} posts Â·{' '}
               {worker.status?.stats?.dmsSent ?? 0} DMs
             </p>
           </div>
@@ -263,7 +263,7 @@ export default function ConfigPage() {
               className="btn-secondary !px-3 !py-1.5 text-xs"
               onClick={() => controlWorker('tick')}
               disabled={workerBusy !== null || !worker.status?.isRunning}
-              title={worker.status?.isRunning ? 'Executar um passe agora' : 'Disponível com o worker em execução'}
+              title={worker.status?.isRunning ? 'Executar um passe agora' : 'DisponÃ­vel com o worker em execuÃ§Ã£o'}
             >
               {workerBusy === 'tick' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
               Executar agora
@@ -272,14 +272,14 @@ export default function ConfigPage() {
         </div>
       </div>
 
-      {/* Segurança — senha do usuário local */}
+      {/* SeguranÃ§a â€” senha do usuÃ¡rio local */}
       <div className="card">
         <div className="flex items-center gap-2">
           <KeyRound className="h-5 w-5 text-indigo-500" />
-          <h3 className="text-base font-semibold text-gray-800">Segurança</h3>
+          <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">SeguranÃ§a</h3>
         </div>
         <p className="mt-1 text-xs text-gray-500">
-          Conta única: <span className="font-medium text-gray-700">{user?.email}</span> · a senha fica apenas em{' '}
+          Conta Ãºnica: <span className="font-medium text-gray-700 dark:text-gray-300">{user?.email}</span> Â· a senha fica apenas em{' '}
           <code className="font-mono">~/.jobfinder/auth.json</code>, com hash scrypt (nunca em texto puro).
         </p>
         <form className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3" onSubmit={changePassword}>
@@ -310,7 +310,7 @@ export default function ConfigPage() {
                 type="password"
                 autoComplete="new-password"
                 className="input !pl-10"
-                placeholder="mínimo de 6 caracteres"
+                placeholder="mÃ­nimo de 6 caracteres"
                 value={password.newPassword}
                 onChange={(event) => setPassword({ ...password, newPassword: event.target.value })}
               />
@@ -335,7 +335,7 @@ export default function ConfigPage() {
           <div className="md:col-span-3 flex justify-end">
             <button className="btn-primary" type="submit" disabled={savingPassword}>
               <Save className="h-4 w-4" />
-              {savingPassword ? 'Salvando…' : 'Alterar senha'}
+              {savingPassword ? 'Salvandoâ€¦' : 'Alterar senha'}
             </button>
           </div>
         </form>
@@ -343,7 +343,7 @@ export default function ConfigPage() {
 
       {/* LLM */}
       <div className="card">
-        <h3 className="text-base font-semibold text-gray-800">Provedor de LLM</h3>
+        <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">Provedor de LLM</h3>
         <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
           <div>
             <label className="label" htmlFor="provider">Provedor</label>
@@ -363,7 +363,7 @@ export default function ConfigPage() {
           </div>
           <div className="md:col-span-2">
             <label className="label" htmlFor="apiKey">API Key (vazio = usar Ollama local sem chave)</label>
-            <input id="apiKey" type="password" className="input" placeholder={config.llm.apiKey === '***' ? '•••• (já configurada — digite uma nova para trocar)' : ''} value={config.llm.apiKey === '***' ? '' : config.llm.apiKey} onChange={(event) => setConfig({ ...config, llm: { ...config.llm, apiKey: event.target.value } })} />
+            <input id="apiKey" type="password" className="input" placeholder={config.llm.apiKey === '***' ? 'â€¢â€¢â€¢â€¢ (jÃ¡ configurada â€” digite uma nova para trocar)' : ''} value={config.llm.apiKey === '***' ? '' : config.llm.apiKey} onChange={(event) => setConfig({ ...config, llm: { ...config.llm, apiKey: event.target.value } })} />
           </div>
           <div>
             <label className="label" htmlFor="temperature">Temperatura ({config.llm.temperature})</label>
@@ -374,14 +374,14 @@ export default function ConfigPage() {
 
       {/* Limits */}
       <div className="card">
-        <h3 className="text-base font-semibold text-gray-800">Limites de rate (proteção da conta)</h3>
+        <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">Limites de rate (proteÃ§Ã£o da conta)</h3>
         <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
           <NumberField label="Convites por semana" value={config.limits.invitationsPerWeek} onChange={(value) => setConfig({ ...config, limits: { ...config.limits, invitationsPerWeek: value } })} />
-          <NumberField label="DMs por dia (máx. 5)" value={config.limits.dmsPerDay} onChange={(value) => setConfig({ ...config, limits: { ...config.limits, dmsPerDay: value } })} />
+          <NumberField label="DMs por dia (mÃ¡x. 5)" value={config.limits.dmsPerDay} onChange={(value) => setConfig({ ...config, limits: { ...config.limits, dmsPerDay: value } })} />
           <NumberField label="Intervalo entre DMs (min)" value={config.limits.dmIntervalMinutes} onChange={(value) => setConfig({ ...config, limits: { ...config.limits, dmIntervalMinutes: value } })} />
           <NumberField label="Candidaturas por dia" value={config.limits.applicationsPerDay} onChange={(value) => setConfig({ ...config, limits: { ...config.limits, applicationsPerDay: value } })} />
-          <NumberField label="Delay mínimo entre ações (ms)" value={config.limits.minDelayMs} onChange={(value) => setConfig({ ...config, limits: { ...config.limits, minDelayMs: value } })} />
-          <NumberField label="Delay máximo entre ações (ms)" value={config.limits.maxDelayMs} onChange={(value) => setConfig({ ...config, limits: { ...config.limits, maxDelayMs: value } })} />
+          <NumberField label="Delay mÃ­nimo entre aÃ§Ãµes (ms)" value={config.limits.minDelayMs} onChange={(value) => setConfig({ ...config, limits: { ...config.limits, minDelayMs: value } })} />
+          <NumberField label="Delay mÃ¡ximo entre aÃ§Ãµes (ms)" value={config.limits.maxDelayMs} onChange={(value) => setConfig({ ...config, limits: { ...config.limits, maxDelayMs: value } })} />
         </div>
         <div className="mt-4">
           <label className="flex items-center gap-2 text-sm text-gray-600">
@@ -390,14 +390,14 @@ export default function ConfigPage() {
           </label>
           <label className="mt-2 flex items-center gap-2 text-sm text-gray-600">
             <input type="checkbox" className="h-4 w-4 accent-indigo-500" checked={Boolean(config.outreach?.autoApproveDms)} onChange={(event) => setConfig({ ...config, outreach: { ...config.outreach, autoApproveDms: event.target.checked } })} />
-            Aprovar mensagens de DM automaticamente (sem revisão manual)
+            Aprovar mensagens de DM automaticamente (sem revisÃ£o manual)
           </label>
         </div>
       </div>
 
       {/* Server */}
       <div className="card">
-        <h3 className="text-base font-semibold text-gray-800">Servidor local</h3>
+        <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">Servidor local</h3>
         <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
           <NumberField label="Porta" value={config.port} onChange={(value) => setConfig({ ...config, port: value })} />
           <div>
@@ -405,13 +405,13 @@ export default function ConfigPage() {
             <input id="host" className="input" value={config.host} onChange={(event) => setConfig({ ...config, host: event.target.value })} />
           </div>
         </div>
-        <p className="mt-2 text-xs text-gray-400">A porta só muda na próxima inicialização: npx --yes @danhachuel/jobfinder@&lt;versão&gt; start --port {config.port}</p>
+        <p className="mt-2 text-xs text-gray-400">A porta sÃ³ muda na prÃ³xima inicializaÃ§Ã£o: npx --yes @danhachuel/jobfinder@&lt;versÃ£o&gt; start --port {config.port}</p>
       </div>
 
       {/* Topics */}
       <div className="card">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold text-gray-800">Temas de postagem</h3>
+          <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">Temas de postagem</h3>
           <button className="btn-primary !px-3 !py-1.5 text-xs" onClick={() => setTopicModal(true)}>
             <Plus className="h-3.5 w-3.5" />
             Novo tema
@@ -421,7 +421,7 @@ export default function ConfigPage() {
           {topics.map((topic) => (
             <li key={topic.id} className="flex flex-wrap items-center gap-3 py-3">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-gray-800">{topic.name}</p>
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{topic.name}</p>
                 <p className="text-xs text-gray-400">{topic.prompt || 'Sem diretriz'}</p>
               </div>
               <label className="flex cursor-pointer items-center gap-1 text-xs text-gray-500">
@@ -439,7 +439,7 @@ export default function ConfigPage() {
       <div className="sticky bottom-4 flex justify-end">
         <button className="btn-primary" onClick={save} disabled={saving}>
           <Save className="h-4 w-4" />
-          {saving ? 'Salvando…' : 'Salvar configuração'}
+          {saving ? 'Salvandoâ€¦' : 'Salvar configuraÃ§Ã£o'}
         </button>
       </div>
 
@@ -460,13 +460,13 @@ export default function ConfigPage() {
           </button>
         </>}
       >
-        <p className="text-sm text-gray-700">
-          Ao desativar o modo Dry-run, o JobFinder executará ações reais no LinkedIn (postagens, convites, DMs e
+        <p className="text-sm text-gray-700 dark:text-gray-300">
+          Ao desativar o modo Dry-run, o JobFinder executarÃ¡ aÃ§Ãµes reais no LinkedIn (postagens, convites, DMs e
           candidaturas). Use com responsabilidade.
         </p>
         <p className="mt-3 text-xs text-gray-500">
-          Confirme também que há um canal do LinkedIn conectado em <span className="font-medium">Integrações</span> — sem
-          canal, as ações reais são bloqueadas pelo backend.
+          Confirme tambÃ©m que hÃ¡ um canal do LinkedIn conectado em <span className="font-medium">IntegraÃ§Ãµes</span> â€” sem
+          canal, as aÃ§Ãµes reais sÃ£o bloqueadas pelo backend.
         </p>
       </Modal>
 
@@ -475,18 +475,18 @@ export default function ConfigPage() {
         <button className="btn-primary" onClick={createTopic}>Criar</button>
       </>}>
         <label className="label" htmlFor="topicName">Nome</label>
-        <input id="topicName" className="input" placeholder="Ex.: Inteligência Artificial no trabalho" value={topicDraft.name} onChange={(event) => setTopicDraft({ ...topicDraft, name: event.target.value })} />
+        <input id="topicName" className="input" placeholder="Ex.: InteligÃªncia Artificial no trabalho" value={topicDraft.name} onChange={(event) => setTopicDraft({ ...topicDraft, name: event.target.value })} />
         <label className="label mt-4" htmlFor="topicPrompt">Diretriz para a LLM</label>
-        <textarea id="topicPrompt" className="input h-24 resize-y" placeholder="Ex.: explique um conceito de IA com exemplo prático do dia a dia" value={topicDraft.prompt} onChange={(event) => setTopicDraft({ ...topicDraft, prompt: event.target.value })} />
+        <textarea id="topicPrompt" className="input h-24 resize-y" placeholder="Ex.: explique um conceito de IA com exemplo prÃ¡tico do dia a dia" value={topicDraft.prompt} onChange={(event) => setTopicDraft({ ...topicDraft, prompt: event.target.value })} />
       </Modal>
     </div>
   );
 }
 
-/** Switch visual (acessível: checkbox nativo cobrindo a área clicável). */
+/** Switch visual (acessÃ­vel: checkbox nativo cobrindo a Ã¡rea clicÃ¡vel). */
 function Toggle({ checked, onChange, disabled, label }) {
   return (
-    <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700">
+    <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
       <span className="relative inline-block h-6 w-11 shrink-0">
         <input
           type="checkbox"

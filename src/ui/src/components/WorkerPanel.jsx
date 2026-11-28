@@ -1,6 +1,6 @@
-/**
+﻿/**
  * Worker Panel (Dashboard): live status of the background worker, the task
- * it is running, when it ticks next and the last actions — plus Start/Stop
+ * it is running, when it ticks next and the last actions â€” plus Start/Stop
  * controls. Backend is the source of truth (react-state-guard): everything
  * here comes from GET /api/worker/status and survives an F5.
  */
@@ -33,13 +33,13 @@ export function WorkerPanel() {
       if (action === 'tick') {
         const result = await tickWorker();
         if (result?.ok === false) {
-          toast.error(result.message ?? 'Não foi possível executar o passe.');
+          toast.error(result.message ?? 'NÃ£o foi possÃ­vel executar o passe.');
         } else {
           toast.success(`Passe executado: ${result.result?.sent ?? 0} DM(s), ${result.result?.posts?.length ?? 0} post(s).`);
         }
       } else {
         await setWorkerRunning(action === 'start');
-        toast.success(action === 'start' ? 'Worker em execução.' : 'Worker pausado.');
+        toast.success(action === 'start' ? 'Worker em execuÃ§Ã£o.' : 'Worker pausado.');
       }
       await refresh();
     } catch (err) {
@@ -55,17 +55,17 @@ export function WorkerPanel() {
     <div className="card">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-start gap-3">
-          <span className={`mt-1 flex h-9 w-9 items-center justify-center rounded-lg ${running ? 'bg-green-100 text-green-600' : stopped ? 'bg-gray-100 text-gray-500' : 'bg-amber-100 text-amber-600'}`}>
+          <span className={`mt-1 flex h-9 w-9 items-center justify-center rounded-lg ${running ? 'bg-green-100 text-green-600' : stopped ? 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300' : 'bg-amber-100 text-amber-600'}`}>
             {running ? <Zap className="h-5 w-5" /> : <Loader2 className="h-5 w-5" />}
           </span>
           <div>
-            <h3 className="text-base font-semibold text-gray-800">Automação em segundo plano</h3>
-            <p className="mt-1 text-xs text-gray-500">
+            <h3 className="text-base font-semibold text-gray-800">AutomaÃ§Ã£o em segundo plano</h3>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {running
                 ? 'Processando a fila de postagens agendadas e cascatas de DM mesmo com o navegador fechado.'
                 : stopped
-                  ? 'O worker não está rodando. Inicie-o para que as automações voltem a acontecer.'
-                  : 'Worker pausado: as filas continuam salvas, mas nada é enviado.'}
+                  ? 'O worker nÃ£o estÃ¡ rodando. Inicie-o para que as automaÃ§Ãµes voltem a acontecer.'
+                  : 'Worker pausado: as filas continuam salvas, mas nada Ã© enviado.'}
             </p>
             {status?.activeTask && (
               <p className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700">
@@ -90,7 +90,7 @@ export function WorkerPanel() {
             className="btn-secondary"
             onClick={() => control('tick')}
             disabled={busy !== null || !running}
-            title={running ? 'Executar um passe agora' : 'Disponível apenas com o worker em execução'}
+            title={running ? 'Executar um passe agora' : 'DisponÃ­vel apenas com o worker em execuÃ§Ã£o'}
           >
             {busy === 'tick' ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             Executar agora
@@ -98,40 +98,40 @@ export function WorkerPanel() {
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-4 border-t border-gray-100 pt-4 text-xs text-gray-500 sm:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-4 border-t border-gray-100 pt-4 dark:border-gray-800 text-xs text-gray-500 dark:text-gray-400 sm:grid-cols-4">
         <div>
-          <p className="flex items-center gap-1 font-semibold text-gray-700"><Clock className="h-3.5 w-3.5" /> Próxima verificação</p>
-          <p className="mt-1">{status?.nextTickAt ? `${relativeTime(status.nextTickAt)} (${formatDateTime(status.nextTickAt)})` : '—'}</p>
+          <p className="flex items-center gap-1 font-semibold text-gray-700 dark:text-gray-300"><Clock className="h-3.5 w-3.5" /> PrÃ³xima verificaÃ§Ã£o</p>
+          <p className="mt-1">{status?.nextTickAt ? `${relativeTime(status.nextTickAt)} (${formatDateTime(status.nextTickAt)})` : 'â€”'}</p>
         </div>
         <div>
-          <p className="font-semibold text-gray-700">Último passe</p>
-          <p className="mt-1">{status?.lastTickAt ? formatDateTime(status.lastTickAt) : '—'}</p>
+          <p className="font-semibold text-gray-700 dark:text-gray-300">Ãšltimo passe</p>
+          <p className="mt-1">{status?.lastTickAt ? formatDateTime(status.lastTickAt) : 'â€”'}</p>
         </div>
         <div>
-          <p className="font-semibold text-gray-700">Publicados / DMs</p>
-          <p className="mt-1">{stats.postsPublished ?? 0} posts · {stats.dmsSent ?? 0} DMs</p>
+          <p className="font-semibold text-gray-700 dark:text-gray-300">Publicados / DMs</p>
+          <p className="mt-1">{stats.postsPublished ?? 0} posts Â· {stats.dmsSent ?? 0} DMs</p>
         </div>
         <div>
-          <p className="font-semibold text-gray-700">Passes / falhas</p>
-          <p className="mt-1">{stats.ticks ?? 0} · {stats.failed ?? 0} falhas</p>
+          <p className="font-semibold text-gray-700 dark:text-gray-300">Passes / falhas</p>
+          <p className="mt-1">{stats.ticks ?? 0} Â· {stats.failed ?? 0} falhas</p>
         </div>
       </div>
 
       {status?.lastError && (
         <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-          Último erro do worker: {status.lastError}
+          Ãšltimo erro do worker: {status.lastError}
         </p>
       )}
       {error && (
         <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-          Não foi possível ler o status do worker: {error}
+          NÃ£o foi possÃ­vel ler o status do worker: {error}
         </p>
       )}
 
-      <div className="mt-4 border-t border-gray-100 pt-4">
-        <p className="flex items-center gap-1.5 text-xs font-semibold text-gray-700">
+      <div className="mt-4 border-t border-gray-100 pt-4 dark:border-gray-800">
+        <p className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
           <ListChecks className="h-3.5 w-3.5" />
-          Últimas ações
+          Ãšltimas aÃ§Ãµes
         </p>
         {status?.logs?.length ? (
           <ul className="mt-2 space-y-1.5">
@@ -143,7 +143,7 @@ export function WorkerPanel() {
             ))}
           </ul>
         ) : (
-          <p className="mt-2 text-xs text-gray-400">Nenhuma ação registrada ainda.</p>
+          <p className="mt-2 text-xs text-gray-400">Nenhuma aÃ§Ã£o registrada ainda.</p>
         )}
       </div>
     </div>

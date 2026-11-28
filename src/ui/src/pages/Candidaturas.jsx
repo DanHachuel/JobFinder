@@ -1,5 +1,5 @@
-/**
- * Candidaturas — application history + daily quota (§5.3.3).
+﻿/**
+ * Candidaturas â€” application history + daily quota (Â§5.3.3).
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { BriefcaseBusiness, RefreshCw } from 'lucide-react';
@@ -58,42 +58,42 @@ export default function Candidaturas() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="card lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-base font-semibold text-gray-800">Histórico de candidaturas</h3>
+            <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">HistÃ³rico de candidaturas</h3>
             <select className="input w-auto" value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}>
               <option value="">Todos os status</option>
               <option value="submitted">Enviadas</option>
               <option value="dry_run">Dry-run</option>
-              <option value="needs_intervention">Intervenção manual</option>
+              <option value="needs_intervention">IntervenÃ§Ã£o manual</option>
               <option value="failed">Falhas</option>
               <option value="blocked">Bloqueadas</option>
             </select>
           </div>
 
           {!apps.items.length ? (
-            <EmptyState icon={BriefcaseBusiness} title="Nenhuma candidatura" hint="Candidate-se a partir da tela de Vagas. O modo dry-run é o padrão até você conectar o LinkedIn." />
+            <EmptyState icon={BriefcaseBusiness} title="Nenhuma candidatura" hint="Candidate-se a partir da tela de Vagas. O modo dry-run Ã© o padrÃ£o atÃ© vocÃª conectar o LinkedIn." />
           ) : (
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100 text-left text-xs uppercase tracking-wide text-gray-400">
+                  <tr className="border-b border-gray-100 text-left dark:border-gray-800 text-xs uppercase tracking-wide text-gray-400">
                     <th className="pb-2 pr-4">Vaga</th>
                     <th className="pb-2 pr-4">Score</th>
                     <th className="pb-2 pr-4">Status</th>
-                    <th className="pb-2 pr-4">Relatório</th>
-                    <th className="pb-2">Ações</th>
+                    <th className="pb-2 pr-4">RelatÃ³rio</th>
+                    <th className="pb-2">AÃ§Ãµes</th>
                   </tr>
                 </thead>
                 <tbody>
                   {apps.items.map((app) => (
                     <tr key={app.id} className="border-b border-gray-50 last:border-0">
                       <td className="py-3 pr-4">
-                        <p className="font-medium text-gray-700">{app.jobTitle}</p>
+                        <p className="font-medium text-gray-700 dark:text-gray-300">{app.jobTitle}</p>
                         <p className="text-xs text-gray-400">{app.company}</p>
                       </td>
-                      <td className="py-3 pr-4 font-bold text-gray-600">{app.matchScore ?? '—'}</td>
+                      <td className="py-3 pr-4 font-bold text-gray-600">{app.matchScore ?? 'â€”'}</td>
                       <td className="py-3 pr-4"><StatusBadge status={app.status} simulated={app.dryRun} /></td>
                       <td className="max-w-xs py-3 pr-4 text-xs text-gray-500">
-                        {app.report?.notes ?? '—'}
+                        {app.report?.notes ?? 'â€”'}
                         {app.report?.screenshot && <span className="block text-[10px] text-gray-400">screenshot salvo em ~/.jobfinder/screenshots/</span>}
                       </td>
                       <td className="py-3">
@@ -113,10 +113,10 @@ export default function Candidaturas() {
 
           {apps.total > apps.limit && (
             <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
-              <span>Página {apps.page} · {apps.total} registros</span>
+              <span>PÃ¡gina {apps.page} Â· {apps.total} registros</span>
               <div className="flex gap-2">
                 <button className="btn-secondary !px-3 !py-1.5 text-xs" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Anterior</button>
-                <button className="btn-secondary !px-3 !py-1.5 text-xs" disabled={page * apps.limit >= apps.total} onClick={() => setPage((p) => p + 1)}>Próxima</button>
+                <button className="btn-secondary !px-3 !py-1.5 text-xs" disabled={page * apps.limit >= apps.total} onClick={() => setPage((p) => p + 1)}>PrÃ³xima</button>
               </div>
             </div>
           )}
@@ -124,21 +124,21 @@ export default function Candidaturas() {
 
         <div className="space-y-6">
           <div className="card">
-            <h3 className="text-base font-semibold text-gray-800">Limite diário</h3>
+            <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">Limite diÃ¡rio</h3>
             <div className="mt-6">
               {limits && <QuotaBar used={limits.used} limit={limits.limit} label="Candidaturas hoje" tone="bg-emerald-500" />}
             </div>
             <p className="mt-4 text-xs text-gray-400">
-              Padrão 20/dia (configurável). Cada candidatura passa pelo rate limiter com delays humanos e reutiliza a sessão do
+              PadrÃ£o 20/dia (configurÃ¡vel). Cada candidatura passa pelo rate limiter com delays humanos e reutiliza a sessÃ£o do
               navegador com os cookies conectados.
             </p>
           </div>
 
           <div className="card">
-            <h3 className="text-base font-semibold text-gray-800">Sobre o Easy Apply</h3>
+            <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">Sobre o Easy Apply</h3>
             <p className="mt-3 text-xs text-gray-500">
-              A automação usa Playwright (opcional). Sem ele instalado — ou com dry-run ativo — o app registra a candidatura como
-              <strong> dry-run</strong> e nada é enviado. Formulários complexos retornam <strong>intervenção manual</strong> com
+              A automaÃ§Ã£o usa Playwright (opcional). Sem ele instalado â€” ou com dry-run ativo â€” o app registra a candidatura como
+              <strong> dry-run</strong> e nada Ã© enviado. FormulÃ¡rios complexos retornam <strong>intervenÃ§Ã£o manual</strong> com
               screenshot salvo no servidor.
             </p>
             <p className="mt-3 text-xs text-gray-400">Instalar sob demanda: npm i -g playwright &amp;&amp; npx playwright install chromium</p>

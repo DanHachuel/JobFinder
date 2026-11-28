@@ -1,5 +1,5 @@
-/**
- * Agendar — LLM generation from themes (§5.1.1) + scheduling (§5.1.2).
+﻿/**
+ * Agendar â€” LLM generation from themes (Â§5.1.1) + scheduling (Â§5.1.2).
  * Preview is mandatory; the scheduling queue shows progress (Zeigarnik).
  */
 import React, { useCallback, useEffect, useState } from 'react';
@@ -50,7 +50,7 @@ export default function Agendar() {
       setDraft(result.post);
       toast.success(`Texto gerado (${result.generated.provider}/${result.generated.model}, ${result.generated.chars} caracteres). Revise o preview.`);
     } catch (err) {
-      toast.error(`Geração falhou: ${err.message}`);
+      toast.error(`GeraÃ§Ã£o falhou: ${err.message}`);
     } finally {
       setGenerating(false);
     }
@@ -108,16 +108,16 @@ export default function Agendar() {
     <div className="space-y-6">
       {/* Themes */}
       <div className="card">
-        <h3 className="text-base font-semibold text-gray-800">Temas pré-definidos</h3>
-        <p className="mt-1 text-xs text-gray-500">A LLM escreve o post a partir do tema e das diretrizes. Gerencie a lista em Configurações › Temas.</p>
+        <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">Temas prÃ©-definidos</h3>
+        <p className="mt-1 text-xs text-gray-500">A LLM escreve o post a partir do tema e das diretrizes. Gerencie a lista em ConfiguraÃ§Ãµes â€º Temas.</p>
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
           {topics.map((topic) => (
             <button
               key={topic.id}
               onClick={() => setTopicId(topic.id)}
-              className={`rounded-xl border p-4 text-left transition ${topicId === topic.id ? 'border-indigo-400 bg-indigo-50' : 'border-gray-100 bg-white hover:border-gray-300'}`}
+              className={`rounded-xl border p-4 text-left transition ${topicId === topic.id ? 'border-indigo-400 bg-indigo-50' : 'border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-900 hover:border-gray-300'}`}
             >
-              <p className="text-sm font-semibold text-gray-800">{topic.name}</p>
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{topic.name}</p>
               <p className="mt-1 line-clamp-2 text-xs text-gray-500">{topic.prompt || 'Sem diretriz adicional'}</p>
               <p className="mt-2 text-[10px] uppercase tracking-wide text-gray-400">{topic.postsCount ?? 0} posts gerados</p>
             </button>
@@ -128,43 +128,43 @@ export default function Agendar() {
       {/* Generator */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="card">
-          <h3 className="text-base font-semibold text-gray-800">Gerar post com LLM</h3>
+          <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">Gerar post com LLM</h3>
           <label className="label mt-4" htmlFor="topic">Tema</label>
           <select id="topic" className="input" value={topicId} onChange={(event) => setTopicId(event.target.value)}>
-            <option value="">Selecione…</option>
+            <option value="">Selecioneâ€¦</option>
             {topics.map((topic) => (
               <option key={topic.id} value={topic.id}>{topic.name}</option>
             ))}
           </select>
 
-          <label className="label mt-4" htmlFor="instructions">Instruções adicionais (opcional)</label>
+          <label className="label mt-4" htmlFor="instructions">InstruÃ§Ãµes adicionais (opcional)</label>
           <textarea
             id="instructions"
             className="input h-24 resize-y"
-            placeholder="Ex.: mencione que estou contratando para a vaga de dev sênior"
+            placeholder="Ex.: mencione que estou contratando para a vaga de dev sÃªnior"
             value={instructions}
             onChange={(event) => setInstructions(event.target.value)}
           />
 
           <button className="btn-primary mt-4" onClick={generate} disabled={generating || !topicId}>
             <Wand2 className="h-4 w-4" />
-            {generating ? 'Gerando…' : 'Gerar e revisar'}
+            {generating ? 'Gerandoâ€¦' : 'Gerar e revisar'}
           </button>
           <p className="mt-2 text-xs text-gray-400">
-            A publicação só acontece após a sua aprovação no preview. Provedor configurado em Configurações › LLM.
+            A publicaÃ§Ã£o sÃ³ acontece apÃ³s a sua aprovaÃ§Ã£o no preview. Provedor configurado em ConfiguraÃ§Ãµes â€º LLM.
           </p>
         </div>
 
         {/* Draft preview */}
         <div className="card">
-          <h3 className="text-base font-semibold text-gray-800">Preview do rascunho</h3>
+          <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">Preview do rascunho</h3>
           {draft ? (
             <>
-              <div className="mt-4 max-h-56 overflow-y-auto rounded-lg border border-gray-100 bg-gray-50 p-4 text-sm whitespace-pre-wrap text-gray-700">
+              <div className="mt-4 max-h-56 overflow-y-auto rounded-lg border border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50 p-4 text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300">
                 {draft.text}
               </div>
               <p className="mt-2 text-xs text-gray-400">
-                {draft.text.length} caracteres · gerado por {draft.generatedBy?.provider ?? 'LLM'} / {draft.generatedBy?.model ?? '—'}
+                {draft.text.length} caracteres Â· gerado por {draft.generatedBy?.provider ?? 'LLM'} / {draft.generatedBy?.model ?? 'â€”'}
               </p>
 
               <div className="mt-4 flex flex-wrap items-end gap-2">
@@ -183,7 +183,7 @@ export default function Agendar() {
               </div>
             </>
           ) : (
-            <p className="mt-4 rounded-lg border border-dashed border-gray-200 p-6 text-center text-xs text-gray-400">
+            <p className="mt-4 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 p-6 text-center text-xs text-gray-400">
               Gere um texto para visualizar o preview aqui.
             </p>
           )}
@@ -193,20 +193,20 @@ export default function Agendar() {
       {/* Queue */}
       <div className="card">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold text-gray-800">Fila de agendamentos</h3>
+          <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">Fila de agendamentos</h3>
           <span className="text-xs text-gray-400">{queue.length} pendentes</span>
         </div>
         {queue.length === 0 ? (
-          <EmptyState icon={CalendarPlus} title="Nenhum agendamento" hint="Gere um post com LLM e agende a publicação para uma data futura." />
+          <EmptyState icon={CalendarPlus} title="Nenhum agendamento" hint="Gere um post com LLM e agende a publicaÃ§Ã£o para uma data futura." />
         ) : (
           <ul className="mt-4 space-y-3">
             {queue.map((post) => (
-              <li key={post.id} className="rounded-lg border border-gray-100 p-4">
+              <li key={post.id} className="rounded-lg border border-gray-100 p-4 dark:border-gray-800">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-gray-700">{post.text.slice(0, 90)}</p>
+                    <p className="truncate text-sm font-medium text-gray-700 dark:text-gray-300">{post.text.slice(0, 90)}</p>
                     <p className="mt-1 text-xs text-gray-400">
-                      {post.topicName ?? 'Manual'} · {formatDateTime(post.scheduledAt)}
+                      {post.topicName ?? 'Manual'} Â· {formatDateTime(post.scheduledAt)}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
@@ -222,7 +222,7 @@ export default function Agendar() {
                 <div className="mt-3">
                   <ProgressBar
                     percent={Math.max(0, Math.min(100, 100 - ((new Date(post.scheduledAt) - Date.now()) / (60 * 60 * 1000)) * 10))}
-                    label="Tempo até a publicação"
+                    label="Tempo atÃ© a publicaÃ§Ã£o"
                     showPercent={false}
                   />
                 </div>

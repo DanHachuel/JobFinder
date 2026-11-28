@@ -1,6 +1,6 @@
 {
   "name": "@danhachuel/jobfinder",
-  "version": "0.1.18",
+  "version": "0.1.19",
   "description": "JobFinder — LinkedIn automation platform (posts, connections/DMs, job matching) with a React + Vite UI. Intelligent workflows, JSON storage.",
   "keywords": [
     "linkedin",

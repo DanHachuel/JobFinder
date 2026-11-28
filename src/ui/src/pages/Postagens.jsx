@@ -1,5 +1,5 @@
-/**
- * Postagens — manual composer (§5.1.3) + history (§5.1.4).
+﻿/**
+ * Postagens â€” manual composer (Â§5.1.3) + history (Â§5.1.4).
  * Side-by-side preview before publishing, char counter, filters, actions.
  */
 import React, { useCallback, useEffect, useState } from 'react';
@@ -121,19 +121,19 @@ export default function Postagens() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <MetricCard label="Publicadas" value={stats?.byStatus?.published ?? 0} hint="total no histórico" />
-        <MetricCard label="Agendadas" value={stats?.byStatus?.scheduled ?? 0} hint="próximas 24h+" />
-        <MetricCard label="Rascunhos" value={stats?.byStatus?.draft ?? 0} hint="aguardando revisão" />
+        <MetricCard label="Publicadas" value={stats?.byStatus?.published ?? 0} hint="total no histÃ³rico" />
+        <MetricCard label="Agendadas" value={stats?.byStatus?.scheduled ?? 0} hint="prÃ³ximas 24h+" />
+        <MetricCard label="Rascunhos" value={stats?.byStatus?.draft ?? 0} hint="aguardando revisÃ£o" />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Composer */}
         <div className="card">
-          <h3 className="text-base font-semibold text-gray-800">Nova postagem manual</h3>
-          <p className="mt-1 text-xs text-gray-500">Texto puro — o LinkedIn não aceita markdown. Preview obrigatório antes de publicar.</p>
+          <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">Nova postagem manual</h3>
+          <p className="mt-1 text-xs text-gray-500">Texto puro â€” o LinkedIn nÃ£o aceita markdown. Preview obrigatÃ³rio antes de publicar.</p>
           <textarea
             className="input mt-4 h-64 resize-y"
-            placeholder="Escreva sua postagem aqui…"
+            placeholder="Escreva sua postagem aquiâ€¦"
             value={text}
             onChange={(event) => setText(event.target.value)}
           />
@@ -148,21 +148,21 @@ export default function Postagens() {
               <PenLine className="h-4 w-4" />
               Salvar rascunho
             </button>
-            <span className="self-center text-xs text-gray-400">Publique pelo botão no histórico →</span>
+            <span className="self-center text-xs text-gray-400">Publique pelo botÃ£o no histÃ³rico â†’</span>
           </div>
         </div>
 
         {/* Preview (Jakob) */}
         <div className="card">
-          <h3 className="text-base font-semibold text-gray-800">Preview</h3>
-          <div className="mt-4 max-h-64 overflow-y-auto rounded-lg border border-gray-100 bg-gray-50 p-4 text-sm whitespace-pre-wrap text-gray-700">
-            {text || <span className="text-gray-400">O preview aparece aqui conforme você digita.</span>}
+          <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">Preview</h3>
+          <div className="mt-4 max-h-64 overflow-y-auto rounded-lg border border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50 p-4 text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300">
+            {text || <span className="text-gray-400">O preview aparece aqui conforme vocÃª digita.</span>}
           </div>
           <div className="mt-3 flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-600">JF</div>
             <div>
-              <p className="text-sm font-medium text-gray-700">Você</p>
-              <p className="text-xs text-gray-400">Publicar agora · visível para todos</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">VocÃª</p>
+              <p className="text-xs text-gray-400">Publicar agora Â· visÃ­vel para todos</p>
             </div>
           </div>
         </div>
@@ -171,7 +171,7 @@ export default function Postagens() {
       {/* History */}
       <div className="card">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-base font-semibold text-gray-800">Histórico</h3>
+          <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">HistÃ³rico</h3>
           <div className="flex flex-wrap items-center gap-2">
             <select className="input w-auto" value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}>
               {STATUS_FILTERS.map(([value, label]) => (
@@ -195,20 +195,20 @@ export default function Postagens() {
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 text-left text-xs uppercase tracking-wide text-gray-400">
+                <tr className="border-b border-gray-100 text-left dark:border-gray-800 text-xs uppercase tracking-wide text-gray-400">
                   <th className="pb-2 pr-4">Tema</th>
                   <th className="pb-2 pr-4">Texto</th>
                   <th className="pb-2 pr-4">Status</th>
                   <th className="pb-2 pr-4">Data</th>
-                  <th className="pb-2 text-right">Ações</th>
+                  <th className="pb-2 text-right">AÃ§Ãµes</th>
                 </tr>
               </thead>
               <tbody>
                 {posts.items.map((post) => (
                   <tr key={post.id} className="border-b border-gray-50 last:border-0">
-                    <td className="py-3 pr-4 text-gray-600">{post.topicName ?? '—'}</td>
+                    <td className="py-3 pr-4 text-gray-600">{post.topicName ?? 'â€”'}</td>
                     <td className="max-w-xs py-3 pr-4">
-                      <p className="truncate text-gray-700" title={post.text}>{post.text.slice(0, 80)}{post.text.length > 80 ? '…' : ''}</p>
+                      <p className="truncate text-gray-700 dark:text-gray-300" title={post.text}>{post.text.slice(0, 80)}{post.text.length > 80 ? 'â€¦' : ''}</p>
                       {post.error && <p className="mt-1 text-xs text-red-500">{post.error}</p>}
                     </td>
                     <td className="py-3 pr-4"><StatusBadge status={post.status} simulated={post.simulated} /></td>
@@ -248,11 +248,11 @@ export default function Postagens() {
         {posts.total > posts.limit && (
           <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
             <span>
-              Página {posts.page} · {posts.total} registros
+              PÃ¡gina {posts.page} Â· {posts.total} registros
             </span>
             <div className="flex gap-2">
               <button className="btn-secondary !px-3 !py-1.5 text-xs" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Anterior</button>
-              <button className="btn-secondary !px-3 !py-1.5 text-xs" disabled={page * posts.limit >= posts.total} onClick={() => setPage((p) => p + 1)}>Próxima</button>
+              <button className="btn-secondary !px-3 !py-1.5 text-xs" disabled={page * posts.limit >= posts.total} onClick={() => setPage((p) => p + 1)}>PrÃ³xima</button>
             </div>
           </div>
         )}

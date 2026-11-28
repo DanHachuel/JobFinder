@@ -1,5 +1,5 @@
-/**
- * Painel — dashboard (LeadMaster metric cards + charts).
+﻿/**
+ * Painel â€” dashboard (LeadMaster metric cards + charts).
  * One GET /api/dashboard drives the whole screen.
  */
 import React, { useEffect, useState } from 'react';
@@ -32,8 +32,8 @@ export default function Dashboard() {
     load();
   }, []);
 
-  if (loading) return <Spinner label="Carregando painel…" />;
-  if (error) return <EmptyState icon={Wifi} title="Servidor indisponível" hint={error} action={<button className="btn-secondary" onClick={load}>Tentar novamente</button>} />;
+  if (loading) return <Spinner label="Carregando painelâ€¦" />;
+  if (error) return <EmptyState icon={Wifi} title="Servidor indisponÃ­vel" hint={error} action={<button className="btn-secondary" onClick={load}>Tentar novamente</button>} />;
   if (!data) return null;
 
   const appStatus = data.applications.byStatus ?? {};
@@ -43,20 +43,20 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* Greeting */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-800">Olá 👋 bem-vindo ao seu painel</h1>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">OlÃ¡ ðŸ‘‹ bem-vindo ao seu painel</h1>
         <p className="mt-1 text-sm text-gray-500">
           {data.dryRun
-            ? 'Modo dry-run ativo — tudo é simulado até você conectar o LinkedIn em Integrações e desativar o dry-run.'
-            : 'Modo ativo — as ações serão enviadas de verdade ao LinkedIn.'}
+            ? 'Modo dry-run ativo â€” tudo Ã© simulado atÃ© vocÃª conectar o LinkedIn em IntegraÃ§Ãµes e desativar o dry-run.'
+            : 'Modo ativo â€” as aÃ§Ãµes serÃ£o enviadas de verdade ao LinkedIn.'}
         </p>
       </div>
 
       {/* Metric cards */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          label="Conexão LinkedIn"
+          label="ConexÃ£o LinkedIn"
           value={data.connection.connected ? 'Conectado' : 'Dry-run'}
-          hint={`Modo: ${data.connection.mode}${data.connection.channel ? ` · ${data.connection.channel}` : ''}`}
+          hint={`Modo: ${data.connection.mode}${data.connection.channel ? ` Â· ${data.connection.channel}` : ''}`}
           icon={Wifi}
           tone={data.connection.connected ? 'text-green-600' : 'text-amber-600'}
         />
@@ -81,7 +81,7 @@ export default function Dashboard() {
         </div>
         <div className="card">
           <QuotaBar used={data.applications.quota.used} limit={data.applications.quota.limit} label="Candidaturas hoje" tone="bg-emerald-500" />
-          <p className="mt-3 text-xs text-gray-400">{data.jobs.saved ?? data.jobs.total} vagas salvas · match médio {data.jobs.averageScore}</p>
+          <p className="mt-3 text-xs text-gray-400">{data.jobs.saved ?? data.jobs.total} vagas salvas Â· match mÃ©dio {data.jobs.averageScore}</p>
         </div>
       </div>
 
@@ -93,8 +93,8 @@ export default function Dashboard() {
         <div className="card">
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="text-base font-semibold text-gray-800">Postagens publicadas (7 dias)</h3>
-              <p className="mt-1 text-xs text-gray-500">Uma publicação por dia mantém o algoritmo favorável.</p>
+              <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">Postagens publicadas (7 dias)</h3>
+              <p className="mt-1 text-xs text-gray-500">Uma publicaÃ§Ã£o por dia mantÃ©m o algoritmo favorÃ¡vel.</p>
             </div>
             <button className="text-xs font-medium text-indigo-600 hover:text-indigo-800" onClick={load}>
               <RefreshCw className="mr-1 inline h-3 w-3" />
@@ -109,8 +109,8 @@ export default function Dashboard() {
         <div className="card">
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="text-base font-semibold text-gray-800">Candidaturas por status</h3>
-              <p className="mt-1 text-xs text-gray-500">Sucesso, intervenção manual e falhas ficam isolados em vermelho.</p>
+              <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">Candidaturas por status</h3>
+              <p className="mt-1 text-xs text-gray-500">Sucesso, intervenÃ§Ã£o manual e falhas ficam isolados em vermelho.</p>
             </div>
           </div>
           <div className="mt-4">
@@ -118,7 +118,7 @@ export default function Dashboard() {
               data={[
                 { label: 'Enviadas', value: appStatus.submitted ?? 0, color: '#3b82f6' },
                 { label: 'Dry-run', value: appStatus.dry_run ?? 0, color: '#a5b4fc' },
-                { label: 'Intervenção', value: appStatus.needs_intervention ?? 0, color: '#f59e0b' },
+                { label: 'IntervenÃ§Ã£o', value: appStatus.needs_intervention ?? 0, color: '#f59e0b' },
                 { label: 'Falhas', value: appStatus.failed ?? 0, color: '#ef4444' },
               ]}
             />
@@ -129,28 +129,28 @@ export default function Dashboard() {
       {/* Quick status + activity */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="card lg:col-span-2">
-          <h3 className="text-base font-semibold text-gray-800">Onboarding (checklist)</h3>
+          <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">Onboarding (checklist)</h3>
           <div className="mt-4 space-y-3">
             <ChecklistItem done={Boolean(data.connection.connected)} label="Conectar o LinkedIn (API oficial ou cookies)">
-              <Link to="/integracoes" className="text-indigo-600 hover:text-indigo-800">Abrir Integrações</Link>
+              <Link to="/integracoes" className="text-indigo-600 hover:text-indigo-800">Abrir IntegraÃ§Ãµes</Link>
             </ChecklistItem>
-            <ChecklistItem done={!data.dryRun} label="Desativar o dry-run em Configurações">
-              <Link to="/config" className="text-indigo-600 hover:text-indigo-800">Abrir Configurações</Link>
+            <ChecklistItem done={!data.dryRun} label="Desativar o dry-run em ConfiguraÃ§Ãµes">
+              <Link to="/config" className="text-indigo-600 hover:text-indigo-800">Abrir ConfiguraÃ§Ãµes</Link>
             </ChecklistItem>
-            <ChecklistItem done={Boolean(data.jobs.resumeLoaded)} label="Enviar seu currículo para o match de vagas">
-              <Link to="/vagas" className="text-indigo-600 hover:text-indigo-800">Enviar currículo</Link>
+            <ChecklistItem done={Boolean(data.jobs.resumeLoaded)} label="Enviar seu currÃ­culo para o match de vagas">
+              <Link to="/vagas" className="text-indigo-600 hover:text-indigo-800">Enviar currÃ­culo</Link>
             </ChecklistItem>
             <ChecklistItem done={(data.posts.byStatus?.published ?? 0) > 0} label="Publicar ou agendar a primeira postagem">
               <Link to="/postagens" className="text-indigo-600 hover:text-indigo-800">Escrever post</Link>
             </ChecklistItem>
-            <ChecklistItem done={data.connections.sent > 0} label="Enviar o primeiro convite de conexão">
+            <ChecklistItem done={data.connections.sent > 0} label="Enviar o primeiro convite de conexÃ£o">
               <Link to="/conexoes" className="text-indigo-600 hover:text-indigo-800">Buscar pessoas</Link>
             </ChecklistItem>
           </div>
         </div>
 
         <div className="card">
-          <h3 className="flex items-center gap-2 text-base font-semibold text-gray-800">
+          <h3 className="flex items-center gap-2 text-base font-semibold text-gray-800 dark:text-gray-100">
             <Activity className="h-4 w-4 text-gray-400" />
             Atividade recente
           </h3>
@@ -171,7 +171,7 @@ export default function Dashboard() {
       <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
         <span className="font-semibold uppercase tracking-wide text-gray-400">Resumo</span>
         <span>Postagens: {data.posts.total}</span>
-        <span>Conexões: {data.connections.total}</span>
+        <span>ConexÃµes: {data.connections.total}</span>
         <span>Cascatas: {data.dms.cascades}</span>
         <span>Vagas: {data.jobs.total}</span>
         <span>Candidaturas: {data.applications.total}</span>
@@ -185,7 +185,7 @@ function ChecklistItem({ done, label, children }) {
   return (
     <div className="flex items-center gap-3">
       <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${done ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
-        {done ? '✓' : '•'}
+        {done ? 'âœ“' : 'â€¢'}
       </span>
       <span className={`flex-1 text-sm ${done ? 'text-gray-400 line-through' : 'text-gray-700'}`}>{label}</span>
       {!done && <span className="text-xs font-medium">{children}</span>}

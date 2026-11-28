@@ -6,6 +6,18 @@ All notable changes to JobFinder are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.19] — 2026-11-28
+
+### Added
+
+- **Modo light/dark com alternância no topo** (padrão visual do ProdMaker): hook + provider em `src/ui/src/hooks/useTheme.jsx` (chave `jobfinder_theme` no `localStorage`, fallback para a preferência do SO), atributo `data-theme` aplicado no `<html>` e variant Tailwind v4 (`@variant dark (&:where([data-theme="dark"], [data-theme="dark"] *))`).
+- **Botão de alternância no cabeçalho** (canto superior direito, antes do avatar): ícone **lua** no modo claro e **sol** no escuro, `title`/`aria-label` descrevendo o próximo modo ("Alternar para modo claro/escuro").
+- **Tema escuro aplicado em toda a UI**: fundo do app (gray-950 no shell e no body), header, cards, inputs, botões secundários, labels, tabelas, listas, previews, modais, toasts, badges de status, gráficos e o rodapé — com contraste verificado. A sidebar (já escura por identidade) permanece inalterada nos dois temas.
+
+### Tests
+
+- `fase1-ui-e2e.mjs` cobre o tema: presença do botão no header, alternância do `data-theme`, persistência no `localStorage`, sobrevivência ao **reload**, `title` dinâmico e contraste real do fundo (oklch/rgb computados) nos dois modos. Suíte: 35 E2E + 38 keepalive + 39 fase2-worker + 32 auth + 16 serviços + 22 daemon + 40 runtime + 12 seed + 12 npx + 5 unit.
+
 ## [0.1.18] — 2026-11-25
 
 ### Fixed
